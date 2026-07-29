@@ -34,7 +34,7 @@ test/
 
 ## Status
 
-The NetBox adapter and mocked tests are implemented. MCP transport, live NetBox compatibility, and deployment guidance remain deliberately separate and pending a demo or lab environment.
+The NetBox adapter and mocked MCP protocol tests are implemented. Run the local stdio server with `NETBOX_BASE_URL`, `NETBOX_TOKEN`, and optionally `NETBOX_TIMEOUT_MS`; live NetBox compatibility remains unverified.
 
 ## Local commands
 
