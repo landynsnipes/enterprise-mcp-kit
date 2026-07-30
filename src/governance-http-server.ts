@@ -1,0 +1,9 @@
+import { createServer } from 'node:http';
+import { parseGovernanceHttpConfig } from './governance-http-config.js';
+import { createGovernanceHttpHandler, GovernanceGateway } from './governance-gateway.js';
+import { FileGovernanceStore } from './governance-storage.js';
+import { OidcJwksVerifier } from './oidc-jwks.js';
+const config = parseGovernanceHttpConfig(process.env);
+const gateway = new GovernanceGateway({ issuer: config.issuer, audience: config.audience, verifier: new OidcJwksVerifier({ issuer: config.issuer, audience: config.audience, jwksUrl: config.jwksUrl, allowInsecureLoopback: config.allowInsecureLoopbackOidc }), store: new FileGovernanceStore(config.storagePath) });
+const server = createServer(createGovernanceHttpHandler(gateway));
+server.listen(config.port, config.host, () => console.error(`Governance HTTP gateway listening on ${config.host}:${config.port}`));

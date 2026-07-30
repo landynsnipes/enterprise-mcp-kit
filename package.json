@@ -9,8 +9,20 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test dist/test/*.test.js",
-    "validate": "npm run typecheck && npm test",
-    "mcp:stdio": "npm run build && node dist/src/server.js"
+    "validate": "npm run typecheck && npm test && npm run validate:distribution",
+    "validate:distribution": "node scripts/validate-enterprise-distribution.mjs",
+    "mcp:stdio": "npm run build && node dist/src/server.js",
+    "governance:http": "npm run build && node dist/src/governance-http-server.js",
+    "demo:env": "bash demo/netbox-lab/scripts/generate-env.sh",
+    "demo:config": "test -f demo/netbox-lab/.env && docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml config -q",
+    "demo:up": "npm run demo:config && docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml up -d",
+    "demo:identity:up": "bash demo/netbox-lab/scripts/ensure-keycloak-env.sh && docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml up -d keycloak",
+    "demo:status": "docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml ps",
+    "demo:down": "docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml down",
+    "demo:seed": "bash demo/netbox-lab/scripts/seed.sh",
+    "demo:verify": "bash demo/netbox-lab/scripts/verify-live.sh",
+    "demo:seed:showcase": "bash demo/netbox-lab/scripts/seed-showcase.sh",
+    "demo:verify:showcase": "bash demo/netbox-lab/scripts/verify-showcase.sh"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
