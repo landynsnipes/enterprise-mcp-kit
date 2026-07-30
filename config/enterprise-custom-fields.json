@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "profile": "enterprise-source-of-truth",
+  "principles": [
+    "prefer native NetBox models over custom fields",
+    "separate intended state from observed evidence",
+    "record source and observation time for operational evidence",
+    "use controlled choices for policy states",
+    "do not store secrets in custom fields"
+  ],
+  "fields": [
+    {
+      "name": "observed_software_version",
+      "label": "Observed software version",
+      "type": "text",
+      "objectTypes": ["dcim.device", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "implemented-showcase",
+      "purpose": "Version reported by a named evidence source; not intended state"
+    },
+    {
+      "name": "minimum_approved_version",
+      "label": "Minimum approved version",
+      "type": "text",
+      "objectTypes": ["dcim.device", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "implemented-showcase",
+      "purpose": "Example policy floor used for comparison"
+    },
+    {
+      "name": "version_compliance",
+      "label": "Version compliance",
+      "type": "text",
+      "targetType": "selection",
+      "choices": ["compliant", "noncompliant", "exception", "unknown"],
+      "objectTypes": ["dcim.device", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "implemented-migration-planned",
+      "purpose": "Controlled result of comparing observed and approved state"
+    },
+    {
+      "name": "version_evidence_source",
+      "label": "Version evidence source",
+      "type": "text",
+      "objectTypes": ["dcim.device", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "implemented-showcase",
+      "purpose": "System or process that supplied the observation"
+    },
+    {
+      "name": "version_observed_at",
+      "label": "Version observed at",
+      "type": "text",
+      "targetType": "datetime",
+      "objectTypes": ["dcim.device", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "implemented-migration-planned",
+      "purpose": "Time associated with the observation"
+    },
+    {
+      "name": "workload_software_versions",
+      "label": "Workload software versions",
+      "type": "text",
+      "objectTypes": ["virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "implemented-showcase",
+      "purpose": "Sanitized workload components kept separate from the OS platform"
+    },
+    {
+      "name": "redundancy_group",
+      "label": "Redundancy group",
+      "type": "text",
+      "objectTypes": ["dcim.device", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "implemented-showcase",
+      "purpose": "Logical availability group"
+    },
+    {
+      "name": "failure_domain",
+      "label": "Failure domain",
+      "type": "text",
+      "objectTypes": ["dcim.device", "dcim.rack", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "implemented-showcase",
+      "purpose": "Independent physical or logical failure boundary"
+    },
+    {
+      "name": "environment",
+      "label": "Environment",
+      "type": "selection",
+      "choices": ["production", "disaster-recovery", "staging", "development", "lab"],
+      "objectTypes": ["dcim.device", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "planned",
+      "purpose": "Controlled deployment environment"
+    },
+    {
+      "name": "criticality",
+      "label": "Criticality",
+      "type": "selection",
+      "choices": ["critical", "high", "medium", "low"],
+      "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "planned",
+      "purpose": "Business impact classification"
+    },
+    {
+      "name": "authoritative_source",
+      "label": "Authoritative source",
+      "type": "selection",
+      "choices": ["netbox", "imported", "reconciled", "external-managed"],
+      "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "planned",
+      "purpose": "System responsible for intended state"
+    },
+    {
+      "name": "external_system_id",
+      "label": "External system ID",
+      "type": "text",
+      "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine", "virtualization.cluster"],
+      "status": "planned",
+      "purpose": "Stable identifier used for reconciliation"
+    },
+    {
+      "name": "reconciliation_status",
+      "label": "Reconciliation status",
+      "type": "selection",
+      "choices": ["matched", "drifted", "missing-observation", "exception", "not-evaluated"],
+      "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine"],
+      "status": "planned",
+      "purpose": "Comparison state between intended and observed evidence"
+    },
+    {
+      "name": "last_reconciled_at",
+      "label": "Last reconciled at",
+      "type": "datetime",
+      "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine"],
+      "status": "planned",
+      "purpose": "Last completed reconciliation time"
+    },
+    {
+      "name": "policy_exception_id",
+      "label": "Policy exception ID",
+      "type": "text",
+      "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine"],
+      "status": "planned",
+      "purpose": "External approval or ticket reference; never an authorization token"
+    },
+    {
+      "name": "exception_expires_at",
+      "label": "Exception expires at",
+      "type": "datetime",
+      "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine"],
+      "status": "planned",
+      "purpose": "Expiry of a reviewed policy exception"
+    }
+  ]
+}

@@ -1,7 +1,12 @@
 .env
 .env.*
+demo/netbox-lab/.env
+demo/netbox-lab/.mcp.env
 !.env.example
 node_modules/
 dist/
 coverage/
+__pycache__/
+*.py[cod]
+*.orig
 .DS_Store

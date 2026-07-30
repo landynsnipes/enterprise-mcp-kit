@@ -1,40 +1,118 @@
 # Enterprise MCP Kit
 
-A reusable foundation for secure, job-oriented enterprise MCP connectors.
+A reusable foundation for secure, job-oriented enterprise MCP connectors. Keep
+the enterprise systems you already trust and add bounded AI tools that work with
+real operational context.
 
-## First reference integration: NetBox device lookup
+## Choose your path
 
-The first tool answers one bounded question: **what does NetBox know about this device?** It will retrieve a small, explainable inventory summary by device name or ID. It will not create, update, delete, or expose a generic NetBox API surface.
+### I already use NetBox
+
+Run only the MCP server and point it at your existing NetBox deployment. NetBox
+remains your system of record; this project adds narrow, read-only operational
+context tools for AI clients.
+
+See [Connect an existing NetBox deployment](docs/connect-existing-netbox.md).
+
+### I want to evaluate NetBox and the MCP together
+
+Launch the optional Docker Compose lab with NetBox, PostgreSQL, Valkey, and the
+supporting worker. The lab provides a reproducible environment for integration
+testing and demonstrations without requiring an existing NetBox installation.
+
+See [Run the complete evaluation lab](docs/run-complete-demo.md).
+
+The FOSS component policy, production boundary, plugin admission process, and
+release gates are documented in
+[Enterprise distribution architecture](ENTERPRISE-DISTRIBUTION.md). Component
+licenses and candidate status are recorded in
+[Third-party component policy and notices](THIRD_PARTY_LICENSES.md).
+
+> The included NetBox environment is an evaluation and reference deployment,
+> not a turnkey production NetBox distribution. Production operators remain
+> responsible for identity, TLS, backups, upgrades, availability, and
+> organization-specific deployment policy.
+
+## First reference integration: NetBox operational context
+
+The first five tools answer bounded questions: **what does NetBox know about this
+device?** and **what infrastructure and software posture does NetBox record for
+this site?**, and **what circuit and VPN evidence directly connects these two
+sites?**, **what equipment and recorded power context is in this rack?**, and
+**what recorded power path feeds this exact device?**
+They retrieve explainable summaries using exact identifiers. They do
+not create, update, delete, enumerate broadly, or expose a generic NetBox API
+surface.
 
 ```text
 AI client -> get_device_context -> NetBox REST API (read-only) -> evidence-bounded device summary
+AI client -> get_site_overview -> fixed NetBox REST queries (read-only) -> bounded site summary
+AI client -> get_connectivity_path -> fixed NetBox REST queries (read-only) -> circuit and VPN evidence
+AI client -> get_rack_context -> exact rack plus bounded device query (read-only) -> rack elevation summary
+AI client -> get_power_path -> exact device power ports, PDU outlets, and rack-feed evidence (read-only) -> bounded power-path summary
 ```
 
 ## Implemented adapter contract
 
 - Input: exactly one device `name` or numeric `id`.
-- Output: device identity, status, site, role, device type, primary IP, and source record reference.
+- Output: device identity, status, site, role, device type, primary IP, platform, observed and minimum-approved software versions, compliance and evidence provenance, and source record reference.
 - Boundaries: no writes, no bulk enumeration, no arbitrary filters, and no secret values in tool output.
 - Authentication: a least-privilege NetBox API token supplied only at runtime in the adapter options.
 - Transport: GET only, with a configurable base URL and a five-second default timeout.
 - Base URL: HTTP and HTTPS are accepted for local labs; production deployment policy must require HTTPS. Embedded URL credentials are rejected.
 - Name lookup: queries the NetBox device endpoint, then accepts exactly one exact-name result.
 - Errors: validation and HTTP failures are stable and never include tokens or raw response bodies.
+- Site overview: at most 100 devices are summarized, with counts for racks,
+  active circuits, contact assignments, and device software compliance. A
+  `truncated` flag identifies evidence beyond that bound.
+- Connectivity path: accepts two exact, distinct site names and returns only
+  direct circuit and VPN evidence, participating devices/interfaces, addresses,
+  evidence sources, completeness, and explicit unknowns. It does not claim to
+  calculate or observe the runtime routed or forwarding path.
+- Rack context: accepts an exact rack ID or exact site and rack name, then
+  returns rack identity, dimensions, recorded power-feed count, and at most 100
+  racked devices ordered by elevation with software posture.
+- Power path: accepts exactly one device name or ID, follows its recorded power
+  ports through cabled PDU outlets and each PDU's recorded input cable to a
+  matching recorded rack power feed where the inventory supports it. It
+  identifies A/B evidence and incomplete links, and explicitly does not claim
+  live electrical state, load, breaker state, or actual power delivery.
 
 ## Repository layout
 
 ```text
+demo/
+  netbox-lab/                 # Optional NetBox evaluation environment
 docs/
+  connect-existing-netbox.md  # MCP with an existing NetBox deployment
   netbox-device-lookup.md
+  run-complete-demo.md         # NetBox and MCP evaluation path
 src/
+  mcp-server.ts
   netbox-client.ts
+  server-config.ts
+  server.ts
 test/
+  mcp-server.test.ts
   netbox-client.test.ts
 ```
 
 ## Status
 
-The NetBox adapter and mocked MCP protocol tests are implemented. Run the local stdio server with `NETBOX_BASE_URL`, `NETBOX_TOKEN`, and optionally `NETBOX_TIMEOUT_MS`; live NetBox compatibility remains unverified.
+The repository also includes a provider-neutral, in-memory governance contract
+for future consequential actions. It creates evidence-backed, tenant-scoped
+action plans; supports separately authorized approval or rejection with expiry;
+and records auditable lifecycle events. It intentionally exposes no execution
+operation and is not connected to a NetBox write token or endpoint.
+
+The read-only NetBox adapter and stdio MCP server are implemented with mocked
+adapter and protocol tests. Live compatibility is verified against the included
+NetBox Community 4.6.5 evaluation lab using sanitized inventory and a dedicated
+write-disabled v2 API token. This verification covers the bounded
+`get_device_context`, `get_site_overview`, `get_connectivity_path`,
+`get_rack_context`, and `get_power_path` tools; it
+proves the sanitized Phoenix-to-Reno private WAN and IPsec overlay, but does not certify a
+production deployment.
 
 ## Local commands
 
@@ -44,6 +122,16 @@ npm run build
 npm run typecheck
 npm test
 npm run validate
+npm run validate:distribution
+```
+
+For the optional live evaluation:
+
+```sh
+npm run demo:seed
+npm run demo:verify
+npm run demo:seed:showcase
+npm run demo:verify:showcase
 ```
 
 ## References

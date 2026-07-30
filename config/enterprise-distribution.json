@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "distributionStatus": "evaluation-reference",
+  "policy": {
+    "commercialUseRequired": true,
+    "sourceAvailableRequired": true,
+    "paidRuntimeDependencyAllowed": false,
+    "mandatoryVendorCloudAllowed": false,
+    "approvedLicenses": [
+      "Apache-2.0",
+      "MIT",
+      "BSD-2-Clause",
+      "BSD-3-Clause",
+      "ISC",
+      "PostgreSQL"
+    ],
+    "deniedLicenses": [
+      "SSPL-1.0",
+      "BUSL-1.1",
+      "Elastic-2.0",
+      "LicenseRef-Proprietary",
+      "LicenseRef-Source-Available"
+    ]
+  },
+  "components": [
+    {
+      "id": "enterprise-mcp-kit",
+      "name": "Enterprise MCP Kit",
+      "version": "0.1.0",
+      "license": "Apache-2.0",
+      "source": "https://github.com/landynsnipes/enterprise-mcp-kit",
+      "role": "bounded MCP integration",
+      "required": true,
+      "status": "included"
+    },
+    {
+      "id": "netbox-community",
+      "name": "NetBox Community",
+      "version": "4.6.5",
+      "distributionVersion": "5.0.2",
+      "license": "Apache-2.0",
+      "source": "https://github.com/netbox-community/netbox",
+      "artifact": "docker.io/netboxcommunity/netbox@sha256:691ec1a4f569f3dfb9fefd9f086cca1b39689ad59c3eae753712a741447e5e60",
+      "role": "infrastructure source of truth",
+      "required": true,
+      "status": "included-evaluation"
+    },
+    {
+      "id": "postgresql",
+      "name": "PostgreSQL",
+      "version": "18",
+      "license": "PostgreSQL",
+      "source": "https://www.postgresql.org/",
+      "artifact": "docker.io/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15",
+      "role": "system database",
+      "required": true,
+      "status": "included-evaluation"
+    },
+    {
+      "id": "valkey",
+      "name": "Valkey",
+      "version": "9.1",
+      "license": "BSD-3-Clause",
+      "source": "https://github.com/valkey-io/valkey",
+      "artifact": "docker.io/valkey/valkey@sha256:ee91f7a174ac4d6a6b0685b3a60e321f0a9dbbb691f9b0e285be2ba1d1be8328",
+      "role": "task queue and cache",
+      "required": true,
+      "status": "included-evaluation"
+    },
+    {
+      "id": "keycloak",
+      "name": "Keycloak",
+      "version": "26.0.7",
+      "license": "Apache-2.0",
+      "source": "https://www.keycloak.org/",
+      "artifact": "quay.io/keycloak/keycloak@sha256:4388e2379b7e870a447adbe7b80bd61f5fbf04e925832b19669fda4957f05a81",
+      "role": "optional local OIDC identity lab",
+      "required": false,
+      "status": "included-evaluation"
+    },
+    {
+      "id": "node",
+      "name": "Node.js",
+      "version": ">=18",
+      "license": "MIT",
+      "source": "https://github.com/nodejs/node",
+      "role": "MCP runtime",
+      "required": true,
+      "status": "operator-supplied"
+    },
+    {
+      "id": "mcp-typescript-sdk",
+      "name": "MCP TypeScript SDK",
+      "package": "@modelcontextprotocol/sdk",
+      "version": "1.30.0",
+      "license": "MIT",
+      "source": "https://github.com/modelcontextprotocol/typescript-sdk",
+      "role": "MCP protocol implementation",
+      "required": true,
+      "status": "included"
+    },
+    {
+      "id": "zod",
+      "name": "Zod",
+      "package": "zod",
+      "version": "4.4.3",
+      "license": "MIT",
+      "source": "https://github.com/colinhacks/zod",
+      "role": "runtime contract validation",
+      "required": true,
+      "status": "included"
+    }
+  ],
+  "pluginCandidates": [
+    {
+      "id": "netbox-lifecycle",
+      "name": "NetBox Lifecycle",
+      "version": "1.1.7",
+      "license": "Apache-2.0",
+      "source": "https://github.com/DanSheps/netbox-lifecycle",
+      "purpose": "hardware EOL/EOS, licenses, and support contracts",
+      "status": "not-installed-not-supported",
+      "admissionRequirements": [
+        "NetBox 4.6.5 compatibility test",
+        "migration test",
+        "seed and API test",
+        "backup and restore test",
+        "upgrade and rollback test",
+        "removal and data export test",
+        "license and dependency scan"
+      ]
+    }
+  ],
+  "releaseGates": [
+    "all included component licenses are approved",
+    "all container images are pinned by digest for a production release",
+    "all supported plugins pass their admission requirements",
+    "backup and restore are exercised against the release candidate",
+    "upgrade and rollback are exercised from the previous supported release",
+    "live MCP tests pass with least-privilege credentials",
+    "the production boundary is documented without turnkey claims"
+  ]
+}

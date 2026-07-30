@@ -1,0 +1,64 @@
+name: enterprise-mcp-kit-demo
+services:
+  postgres:
+    # PostgreSQL 18.4 (`18-alpine`) pinned from the locally validated manifest.
+    image: docker.io/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+    env_file: .env
+    environment: { POSTGRES_DB: '${POSTGRES_DB}', POSTGRES_USER: '${POSTGRES_USER}', POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}' }
+    volumes: [postgres:/var/lib/postgresql]
+    networks: [backend]
+    healthcheck: { test: ['CMD-SHELL', 'pg_isready -q -U $$POSTGRES_USER -d $$POSTGRES_DB'], interval: 10s, timeout: 5s, retries: 10 }
+  redis:
+    # Valkey 9.1.1 (`9.1-alpine`) pinned from the locally validated manifest.
+    image: docker.io/valkey/valkey@sha256:ee91f7a174ac4d6a6b0685b3a60e321f0a9dbbb691f9b0e285be2ba1d1be8328
+    env_file: .env
+    command: ['sh', '-c', 'valkey-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"']
+    volumes: [redis:/data]
+    networks: [backend]
+    healthcheck: { test: ['CMD-SHELL', 'valkey-cli --no-auth-warning -a "$$REDIS_PASSWORD" ping | grep -q PONG'], interval: 5s, timeout: 3s, retries: 20 }
+  redis-cache:
+    image: docker.io/valkey/valkey@sha256:ee91f7a174ac4d6a6b0685b3a60e321f0a9dbbb691f9b0e285be2ba1d1be8328
+    env_file: .env
+    command: ['sh', '-c', 'valkey-server --requirepass "$${REDIS_CACHE_PASSWORD}"']
+    volumes: [redis-cache:/data]
+    networks: [backend]
+    healthcheck: { test: ['CMD-SHELL', 'valkey-cli --no-auth-warning -a "$$REDIS_CACHE_PASSWORD" ping | grep -q PONG'], interval: 5s, timeout: 3s, retries: 20 }
+  netbox: &netbox
+    # NetBox Community 4.6.5 / NetBox Docker 5.0.2 pinned from the locally validated manifest.
+    image: docker.io/netboxcommunity/netbox@sha256:691ec1a4f569f3dfb9fefd9f086cca1b39689ad59c3eae753712a741447e5e60
+    env_file: .env
+    environment: { DB_HOST: postgres, DB_PORT: '5432', DB_NAME: '${POSTGRES_DB}', DB_USER: '${POSTGRES_USER}', DB_PASSWORD: '${POSTGRES_PASSWORD}', REDIS_HOST: redis, REDIS_PASSWORD: '${REDIS_PASSWORD}', REDIS_CACHE_HOST: redis-cache, REDIS_CACHE_PASSWORD: '${REDIS_CACHE_PASSWORD}', SECRET_KEY: '${SECRET_KEY}', SUPERUSER_NAME: '${SUPERUSER_NAME}', SUPERUSER_EMAIL: '${SUPERUSER_EMAIL}', SUPERUSER_PASSWORD: '${SUPERUSER_PASSWORD}' }
+    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy }, redis-cache: { condition: service_healthy } }
+    networks: [frontend, backend]
+    ports: ['127.0.0.1:8000:8080']
+    healthcheck: { test: ['CMD-SHELL', 'curl -fsS http://localhost:8080/login/ >/dev/null'], interval: 15s, timeout: 5s, retries: 20, start_period: 90s }
+    volumes:
+      - media:/opt/netbox/netbox/media
+      - reports:/opt/netbox/netbox/reports
+      - scripts:/opt/netbox/netbox/scripts
+      - ./config/enterprise-dashboard.py:/etc/netbox/config/enterprise-dashboard.py:ro
+  netbox-worker:
+    <<: *netbox
+    ports: []
+    networks: [backend]
+    command: ['/opt/netbox/venv/bin/python', '/opt/netbox/netbox/manage.py', 'rqworker']
+    depends_on: { netbox: { condition: service_healthy } }
+    healthcheck: { test: ['CMD-SHELL', 'ps -aux | grep -v grep | grep -q rqworker'], interval: 15s, timeout: 3s, retries: 10, start_period: 20s }
+  keycloak:
+    # Keycloak 26.0.7 pinned from the locally validated manifest.
+    image: quay.io/keycloak/keycloak@sha256:4388e2379b7e870a447adbe7b80bd61f5fbf04e925832b19669fda4957f05a81
+    env_file: .env
+    command: ['start-dev', '--import-realm']
+    environment: { KC_BOOTSTRAP_ADMIN_USERNAME: '${KEYCLOAK_ADMIN}', KC_BOOTSTRAP_ADMIN_PASSWORD: '${KEYCLOAK_ADMIN_PASSWORD}' }
+    volumes: [./config/keycloak-realm.json:/opt/keycloak/data/import/enterprise-mcp-kit-realm.json:ro]
+    networks: [frontend]
+    ports: ['127.0.0.1:8081:8080']
+    healthcheck: { test: ['CMD-SHELL', 'test -r /proc/1/status'], interval: 15s, timeout: 5s, retries: 3, start_period: 15s }
+networks:
+  frontend:
+    driver: bridge
+    driver_opts: { com.docker.network.bridge.host_binding_ipv4: '127.0.0.1' }
+  backend:
+    driver: bridge
+    internal: true
+volumes: { postgres: {}, redis: {}, redis-cache: {}, media: {}, reports: {}, scripts: {} }
