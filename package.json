@@ -22,7 +22,8 @@
     "demo:seed": "bash demo/netbox-lab/scripts/seed.sh",
     "demo:verify": "bash demo/netbox-lab/scripts/verify-live.sh",
     "demo:seed:showcase": "bash demo/netbox-lab/scripts/seed-showcase.sh",
-    "demo:verify:showcase": "bash demo/netbox-lab/scripts/verify-showcase.sh"
+    "demo:verify:showcase": "bash demo/netbox-lab/scripts/verify-showcase.sh",
+    "demo:recovery:verify": "bash demo/netbox-lab/scripts/verify-recovery.sh"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

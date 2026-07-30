@@ -66,6 +66,15 @@ for audit retention.
 
 ## Backup, restore, and rollback
 
+For the pinned local reference, run `npm run demo:recovery:verify` after the
+minimal seed. It creates a PostgreSQL-format backup, restores it to a separate
+temporary PostgreSQL container, compares only site, device, and rack counts,
+then proves the primary lab's read-only MCP path remains unchanged. Its backup
+and temporary restore container are removed automatically. It is a tested
+backup/restore and recovery rollback drill, not a claim of a cross-version
+NetBox upgrade. A version-to-version upgrade/rollback gate remains pending
+until a prior supported production baseline is admitted and tested.
+
 Before declaring a production reference release, operators must record a test
 that restores NetBox database and media backups into an isolated environment,
 replays the selected image digests, and verifies the five read-only tools with
