@@ -1,0 +1,8 @@
+services:
+  netbox:
+    # Tested rollback origin: NetBox Community 4.6.4 / NetBox Docker 5.0.1.
+    image: docker.io/netboxcommunity/netbox@sha256:094e0997eb8916d1e47dba8ac53e32427ee9639cd838512747b771421dff3c9b
+    ports: !override ['127.0.0.1:18000:8080']
+  netbox-worker:
+    image: docker.io/netboxcommunity/netbox@sha256:094e0997eb8916d1e47dba8ac53e32427ee9639cd838512747b771421dff3c9b
+    ports: !override []

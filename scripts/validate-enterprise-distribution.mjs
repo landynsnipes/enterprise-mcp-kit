@@ -7,6 +7,10 @@ const fields = await readJson('config/enterprise-custom-fields.json');
 const packageJson = await readJson('package.json');
 const packageLock = await readJson('package-lock.json');
 const compose = await readFile('demo/netbox-lab/compose.yaml', 'utf8');
+const upgradeGate = await readFile('demo/netbox-lab/scripts/verify-upgrade-rollback.sh', 'utf8');
+const upgradeOrigin = await readFile('demo/netbox-lab/config/upgrade-origin.compose.yaml', 'utf8');
+const upgradeTarget = await readFile('demo/netbox-lab/config/upgrade-target.compose.yaml', 'utf8');
+const operations = await readFile('docs/production-reference-operations.md', 'utf8');
 
 assert.equal(distribution.schemaVersion, 1);
 assert.ok(['evaluation-reference', 'production-reference'].includes(distribution.distributionStatus));
@@ -69,6 +73,13 @@ for (const component of distribution.components.filter((item) => item.artifact))
   assert.ok(compose.includes(`image: ${component.artifact}`), `Compose image drift: ${component.id}`);
 }
 assert.doesNotMatch(compose, /image:\s*(?:docker\.io\/)?redis(?:\/|:)/i, 'Redis images are not allowed; use Valkey.');
+assert.equal(packageJson.scripts['demo:upgrade:verify'], 'bash demo/netbox-lab/scripts/verify-upgrade-rollback.sh');
+assert.match(upgradeGate, /enterprise-mcp-kit-upgrade-\$\$/);
+assert.match(upgradeGate, /verify_five_tools "\$token"/);
+assert.match(upgradeGate, /pg_restore/);
+assert.match(upgradeOrigin, /sha256:094e0997eb8916d1e47dba8ac53e32427ee9639cd838512747b771421dff3c9b/);
+assert.match(upgradeTarget, /sha256:691ec1a4f569f3dfb9fefd9f086cca1b39689ad59c3eae753712a741447e5e60/);
+assert.match(operations, /npm run demo:upgrade:verify/);
 
 assert.equal(fields.schemaVersion, 1);
 assert.ok(fields.principles.length >= 4);

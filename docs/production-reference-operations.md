@@ -71,9 +71,23 @@ minimal seed. It creates a PostgreSQL-format backup, restores it to a separate
 temporary PostgreSQL container, compares only site, device, and rack counts,
 then proves the primary lab's read-only MCP path remains unchanged. Its backup
 and temporary restore container are removed automatically. It is a tested
-backup/restore and recovery rollback drill, not a claim of a cross-version
-NetBox upgrade. A version-to-version upgrade/rollback gate remains pending
-until a prior supported production baseline is admitted and tested.
+backup/restore and recovery rollback drill.
+
+Run `npm run demo:upgrade:verify` as the version-to-version release gate. The
+gate creates a uniquely named disposable Compose project and volumes on
+loopback port 18000, then proves all five read-only MCP tools at each stage:
+
+1. NetBox Community 4.6.4 / NetBox Docker 5.0.1 at digest
+   `sha256:094e0997eb8916d1e47dba8ac53e32427ee9639cd838512747b771421dff3c9b`;
+2. forward migration to the current 4.6.5 / 5.0.2 pinned image;
+3. restoration of the origin database backup and rollback to the origin image.
+
+The gate refuses to run when port 18000 is occupied, never uses the active
+`enterprise-mcp-kit-demo` project, does not print its disposable token, and
+removes its project, volumes, and backup on exit. Passing proves recorded
+inventory remains queryable through the bounded tools across this exact tested
+pair. It does not prove live routing, forwarding, electrical state, or support
+for any other upgrade origin.
 
 Before declaring a production reference release, operators must record a test
 that restores NetBox database and media backups into an isolated environment,
