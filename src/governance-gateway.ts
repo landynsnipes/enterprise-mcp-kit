@@ -5,9 +5,10 @@ import { GovernanceAuthorizationError, GovernanceStateError, GovernanceValidatio
 import { FileGovernanceStore } from './governance-storage.js';
 import { OidcJwksVerifier } from './oidc-jwks.js';
 import { NetBoxDeviceMetadataWriter } from './netbox-metadata-writer.js';
+import { NetBoxSiteInformationWriter } from './netbox-site-writer.js';
 
 type GovernanceTool = 'create_action_plan' | 'get_action_plan' | 'approve_action_plan' | 'reject_action_plan' | 'execute_action_plan' | 'rollback_action_plan';
-export interface GovernanceGatewayOptions { verifier: OidcJwksVerifier; store: FileGovernanceStore; issuer: string; audience: string; writer?: NetBoxDeviceMetadataWriter; now?: () => Date; }
+export interface GovernanceGatewayOptions { verifier: OidcJwksVerifier; store: FileGovernanceStore; issuer: string; audience: string; writer?: NetBoxDeviceMetadataWriter; siteWriter?: NetBoxSiteInformationWriter; now?: () => Date; }
 export class GovernanceGateway {
   constructor(private readonly options: GovernanceGatewayOptions) {}
   async invoke(authorization: string | undefined, tool: GovernanceTool, input: unknown, idempotencyKey?: string): Promise<{ data: ActionPlan; meta: { requestId: string; tenantId: string; execution: 'disabled' | 'enabled'; replayed: boolean } }> {
@@ -24,13 +25,14 @@ export class GovernanceGateway {
       else if (tool === 'approve_action_plan') result = governance.approvePlan(actor, requireText(value.planId), requireText(value.reason));
       else if (tool === 'reject_action_plan') result = governance.rejectPlan(actor, requireText(value.planId), requireText(value.reason));
       else {
-        if (!this.options.writer) throw new GovernanceStateError('Governance write execution is disabled.');
+        if (!this.options.writer || !this.options.siteWriter) throw new GovernanceStateError('Governance write execution is disabled.');
         const planId = requireText(value.planId);
         if (tool === 'execute_action_plan') {
           const prepared = governance.prepareExecution(actor, planId);
           try {
-            const operation = prepared.operation!;
-            const write = await this.options.writer.updateDeviceMetadata({ ...operation, deviceId: Number(prepared.target.id), tenantId: prepared.tenantId });
+            const operation = prepared.operation!; const write = prepared.target.kind === 'netbox-site'
+              ? await this.options.siteWriter.updateSiteInformation({ ...(operation as object), siteId: Number(prepared.target.id), tenantId: prepared.tenantId } as never)
+              : await this.options.writer.updateDeviceMetadata({ ...(operation as object), deviceId: Number(prepared.target.id), tenantId: prepared.tenantId } as never);
             result = governance.completeExecution(actor, planId, write);
           } catch (error) {
             result = governance.failExecution(actor, planId, safeExecutionReason(error));
@@ -38,7 +40,9 @@ export class GovernanceGateway {
         } else {
           const prepared = governance.prepareRollback(actor, planId); const prior = prepared.execution!;
           try {
-            const write = await this.options.writer.updateDeviceMetadata({ deviceId: prior.deviceId, tenantId: prepared.tenantId, field: prior.field, expectedValue: prior.afterValue, newValue: prior.beforeValue, expectedLastUpdated: prior.afterLastUpdated });
+            const write = 'siteId' in prior
+              ? await this.options.siteWriter.updateSiteInformation({ siteId: prior.siteId, tenantId: prepared.tenantId, field: prior.field, expectedValue: prior.afterValue, newValue: prior.beforeValue, expectedLastUpdated: prior.afterLastUpdated })
+              : await this.options.writer.updateDeviceMetadata({ deviceId: prior.deviceId, tenantId: prepared.tenantId, field: prior.field, expectedValue: prior.afterValue, newValue: prior.beforeValue, expectedLastUpdated: prior.afterLastUpdated });
             result = governance.completeRollback(actor, planId, write);
           } catch (error) {
             result = governance.failRollback(actor, planId, safeExecutionReason(error));
@@ -47,7 +51,7 @@ export class GovernanceGateway {
       }
       const next: GovernanceSnapshot = { ...governance.snapshot(), receipts: [...receipts] }; if (mutating) next.receipts.push({ key: idempotencyKey!, tenantId: actor.tenantId, actorId: actor.subjectId, operation: tool, requestDigest: digest, planId: result.id, recordedAt: (this.options.now ?? (() => new Date()))().toISOString() }); return { snapshot: next, result };
     });
-    return { data: plan, meta: { requestId: randomUUID(), tenantId: actor.tenantId, execution: this.options.writer ? 'enabled' : 'disabled', replayed } };
+    return { data: plan, meta: { requestId: randomUUID(), tenantId: actor.tenantId, execution: this.options.writer && this.options.siteWriter ? 'enabled' : 'disabled', replayed } };
   }
 }
 function requireText(value: unknown): string { if (typeof value !== 'string' || !value || value.trim() !== value) throw new GovernanceValidationError('Request contains an invalid required field.'); return value; }

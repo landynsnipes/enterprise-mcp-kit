@@ -73,6 +73,10 @@ references and conflicts, produce an immutable dry-run diff, require approval,
 execute ordered idempotent steps, and retain compensating rollback evidence.
 Site-information maintenance should remain a separate capability with an
 explicit allowlist of address and descriptive fields.
+The implemented site path admits `netbox.site.information.update` for one exact
+tenant-owned site and one of `physical_address`, `shipping_address`,
+`description`, `facility`, or `time_zone`. It cannot reassign tenants, change
+status, delete sites, or patch arbitrary fields.
 governance snapshots and audit events on durable, access-controlled storage;
 back up and restore that store together with the operational records required
 for audit retention.

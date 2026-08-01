@@ -111,6 +111,12 @@ write_permission, _ = ObjectPermission.objects.update_or_create(
 )
 write_permission.object_types.set([ContentType.objects.get_for_model(Device)])
 write_permission.users.set([writer])
+site_write_permission, _ = ObjectPermission.objects.update_or_create(
+    name="Enterprise MCP Kit bounded site information write",
+    defaults={"description": "View and change only the named sanitized showcase site", "enabled": True, "actions": ["view", "change"], "constraints": {"name": "Northstar Phoenix DC1"}},
+)
+site_write_permission.object_types.set([ContentType.objects.get_for_model(Site)])
+site_write_permission.users.set([writer])
 
 Token.objects.filter(user=user, description=TOKEN_DESCRIPTION).delete()
 plaintext = secrets.token_urlsafe(30)

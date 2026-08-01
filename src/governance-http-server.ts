@@ -4,7 +4,8 @@ import { createGovernanceHttpHandler, GovernanceGateway } from './governance-gat
 import { FileGovernanceStore } from './governance-storage.js';
 import { OidcJwksVerifier } from './oidc-jwks.js';
 import { NetBoxDeviceMetadataWriter } from './netbox-metadata-writer.js';
+import { NetBoxSiteInformationWriter } from './netbox-site-writer.js';
 const config = parseGovernanceHttpConfig(process.env);
-const gateway = new GovernanceGateway({ issuer: config.issuer, audience: config.audience, verifier: new OidcJwksVerifier({ issuer: config.issuer, audience: config.audience, jwksUrl: config.jwksUrl, allowInsecureLoopback: config.allowInsecureLoopbackOidc }), store: new FileGovernanceStore(config.storagePath), writer: config.executionEnabled ? new NetBoxDeviceMetadataWriter({ baseUrl: config.netboxWriteBaseUrl!, token: config.netboxWriteToken! }) : undefined });
+const gateway = new GovernanceGateway({ issuer: config.issuer, audience: config.audience, verifier: new OidcJwksVerifier({ issuer: config.issuer, audience: config.audience, jwksUrl: config.jwksUrl, allowInsecureLoopback: config.allowInsecureLoopbackOidc }), store: new FileGovernanceStore(config.storagePath), writer: config.executionEnabled ? new NetBoxDeviceMetadataWriter({ baseUrl: config.netboxWriteBaseUrl!, token: config.netboxWriteToken! }) : undefined, siteWriter: config.executionEnabled ? new NetBoxSiteInformationWriter({ baseUrl: config.netboxWriteBaseUrl!, token: config.netboxWriteToken! }) : undefined });
 const server = createServer(createGovernanceHttpHandler(gateway));
 server.listen(config.port, config.host, () => console.error(`Governance HTTP gateway listening on ${config.host}:${config.port}`));
