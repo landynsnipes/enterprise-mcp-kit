@@ -267,6 +267,8 @@ for site, location, rack_obj, prefix, pdu_a, pdu_b in power_sets:
     panel = save(PowerPanel, {"site": site, "name": f"{prefix}-PANEL-1"}, {"location": location, "description": "Redundant showcase power panel"})
     feed_a = save(PowerFeed, {"power_panel": panel, "name": f"{prefix}-FEED-A"}, {"rack": rack_obj, "status": "active", "type": "primary", "supply": "ac", "phase": "single-phase", "voltage": 208, "amperage": 30, "max_utilization": 80, "tenant": site.tenant})
     feed_b = save(PowerFeed, {"power_panel": panel, "name": f"{prefix}-FEED-B"}, {"rack": rack_obj, "status": "active", "type": "redundant", "supply": "ac", "phase": "single-phase", "voltage": 208, "amperage": 30, "max_utilization": 80, "tenant": site.tenant})
+    PowerFeed.objects.filter(rack=rack_obj, name=feed_a.name).exclude(pk=feed_a.pk).delete()
+    PowerFeed.objects.filter(rack=rack_obj, name=feed_b.name).exclude(pk=feed_b.pk).delete()
     pdu_a_input = save(PowerPort, {"device": pdu_a, "name": "INPUT-A"}, {"type": "iec-60309-p-n-e-6h", "maximum_draw": 6240, "allocated_draw": 4000})
     pdu_b_input = save(PowerPort, {"device": pdu_b, "name": "INPUT-B"}, {"type": "iec-60309-p-n-e-6h", "maximum_draw": 6240, "allocated_draw": 4000})
     cable(f"{prefix}-POWER-FEED-A", feed_a, pdu_a_input, site.tenant, "power")

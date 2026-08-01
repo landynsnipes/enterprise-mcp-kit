@@ -1,0 +1,8 @@
+services:
+  netbox:
+    # Current pinned target: NetBox Community 4.6.5 / NetBox Docker 5.0.2.
+    image: docker.io/netboxcommunity/netbox@sha256:691ec1a4f569f3dfb9fefd9f086cca1b39689ad59c3eae753712a741447e5e60
+    ports: !override ['127.0.0.1:18000:8080']
+  netbox-worker:
+    image: docker.io/netboxcommunity/netbox@sha256:691ec1a4f569f3dfb9fefd9f086cca1b39689ad59c3eae753712a741447e5e60
+    ports: !override []

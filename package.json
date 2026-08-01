@@ -23,7 +23,8 @@
     "demo:verify": "bash demo/netbox-lab/scripts/verify-live.sh",
     "demo:seed:showcase": "bash demo/netbox-lab/scripts/seed-showcase.sh",
     "demo:verify:showcase": "bash demo/netbox-lab/scripts/verify-showcase.sh",
-    "demo:recovery:verify": "bash demo/netbox-lab/scripts/verify-recovery.sh"
+    "demo:recovery:verify": "bash demo/netbox-lab/scripts/verify-recovery.sh",
+    "demo:upgrade:verify": "bash demo/netbox-lab/scripts/verify-upgrade-rollback.sh"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
