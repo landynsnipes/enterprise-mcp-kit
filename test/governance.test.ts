@@ -12,7 +12,7 @@ test('creates explainable, tenant-scoped plans and records immutable-style audit
   let id = 0; const governance = new InMemoryActionGovernance(clock, () => `id-${++id}`);
   const plan = governance.createPlan(planner, planInput);
   assert.equal(plan.state, 'planned'); assert.equal(plan.initiatedBy, planner.subjectId);
-  assert.deepEqual(governance.listAuditEvents(planner, plan.id).map((event) => event.event), ['plan_created']);
+  assert.deepEqual(governance.listAuditEvents(approver, plan.id).map((event) => event.event), ['plan_created']);
   const approved = governance.approvePlan(approver, plan.id, 'Approved after review.');
   assert.equal(approved.state, 'approved'); assert.equal(approved.approvedBy, approver.subjectId);
   assert.deepEqual(governance.listAuditEvents(approver, plan.id).map((event) => event.event), ['plan_created', 'plan_approved']);
@@ -22,6 +22,17 @@ test('requires an approver in the same tenant and never exposes an execution ope
   assert.throws(() => governance.approvePlan(planner, plan.id, 'Self approval.'), GovernanceAuthorizationError);
   assert.throws(() => governance.approvePlan(otherTenant, plan.id, 'Cross tenant.'), GovernanceAuthorizationError);
   assert.equal(typeof (governance as unknown as Record<string, unknown>).executePlan, 'undefined');
+});
+test('enforces separation of duties even when an identity has both roles', () => {
+  const governance = new InMemoryActionGovernance(clock, () => 'plan-1');
+  const dualRole = { subjectId: 'dual-1', tenantId: 'northstar', roles: ['planner', 'approver'] };
+  const plan = governance.createPlan(dualRole, planInput);
+  assert.throws(() => governance.approvePlan(dualRole, plan.id, 'Self approval.'), GovernanceAuthorizationError);
+  assert.throws(() => governance.rejectPlan(dualRole, plan.id, 'Self rejection.'), GovernanceAuthorizationError);
+});
+test('maps roles to fixed capabilities and rejects unknown roles', () => {
+  const governance = new InMemoryActionGovernance(clock, () => 'plan-1');
+  assert.throws(() => governance.createPlan({ subjectId: 'unknown', tenantId: 'northstar', roles: ['realm-admin'] }, planInput), GovernanceAuthorizationError);
 });
 test('expires stale plans and blocks approval after expiration', () => {
   let now = new Date('2026-07-29T12:00:00Z'); const governance = new InMemoryActionGovernance(() => now, () => 'plan-1');
