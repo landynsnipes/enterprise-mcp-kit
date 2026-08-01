@@ -1,10 +1,11 @@
 import { GovernanceAuthorizationError, GovernanceValidationError, type GovernanceActor } from './governance.js';
 
-export type GovernanceCapability = 'plan:create' | 'plan:read' | 'plan:approve' | 'plan:reject' | 'audit:read';
+export type GovernanceCapability = 'plan:create' | 'plan:read' | 'plan:approve' | 'plan:reject' | 'plan:execute' | 'audit:read';
 const roleCapabilities: Readonly<Record<string, readonly GovernanceCapability[]>> = Object.freeze({
   planner: ['plan:create', 'plan:read'],
   approver: ['plan:read', 'plan:approve', 'plan:reject', 'audit:read'],
   auditor: ['plan:read', 'audit:read'],
+  executor: ['plan:read', 'plan:execute', 'audit:read'],
 });
 
 export function capabilitiesForRoles(roles: readonly string[]): GovernanceCapability[] {

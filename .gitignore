@@ -2,6 +2,7 @@
 .env.*
 demo/netbox-lab/.env
 demo/netbox-lab/.mcp.env
+demo/netbox-lab/.governance-write.env
 !.env.example
 node_modules/
 dist/

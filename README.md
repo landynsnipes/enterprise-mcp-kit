@@ -104,10 +104,14 @@ for future consequential actions. It creates evidence-backed, tenant-scoped
 action plans; maps only admitted OIDC roles to fixed capabilities; enforces
 tenant isolation and initiator/approver separation; requires durable
 idempotency keys for mutations; supports approval or rejection with expiry;
-and records auditable lifecycle events. RS256 access tokens must carry the
+and records auditable lifecycle events. Its first optional write is deliberately
+limited to one device custom field, `reconciliation_status`, and requires a
+third `executor` identity, a captured prior value and `last_updated` version,
+post-write verification, and a recorded rollback. RS256 access tokens must carry the
 configured issuer, audience, authorized party, issued-at time, JWT ID, tenant,
-and admitted roles. It intentionally exposes no execution
-operation and is not connected to a NetBox write token or endpoint.
+and admitted roles. Execution remains disabled by default and requires an
+explicitly enabled HTTP gateway plus a separate least-privilege NetBox token.
+The unauthenticated stdio MCP surface remains read-only.
 
 The read-only NetBox adapter and stdio MCP server are implemented with mocked
 adapter and protocol tests. Live compatibility is verified against the included
@@ -136,7 +140,14 @@ npm run demo:seed
 npm run demo:verify
 npm run demo:seed:showcase
 npm run demo:verify:showcase
+npm run demo:identity:verify
+npm run demo:write:verify
 ```
+
+The bounded-write proof changes the sanitized showcase device from `matched`
+to `drifted`, verifies the exact response, replays the idempotent execution,
+then restores `matched`. These are recorded metadata values, not claims about
+live routing, electrical state, or actual configuration drift.
 
 ## References
 

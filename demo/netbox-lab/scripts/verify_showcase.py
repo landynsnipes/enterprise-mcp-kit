@@ -53,7 +53,7 @@ assert IPAddress.objects.filter(tenant__group__slug="showcase-organizations").co
 assert Cluster.objects.filter(tenant__group__slug="showcase-organizations").count() >= 1
 assert VirtualMachine.objects.filter(tenant__group__slug="showcase-organizations").count() >= 3
 assert Platform.objects.filter(slug__in=["example-network-os", "example-secure-os", "enterprise-linux", "example-facility-firmware"]).count() == 4
-assert CustomField.objects.filter(name__in=["observed_software_version", "minimum_approved_version", "version_compliance", "version_evidence_source", "version_observed_at", "workload_software_versions", "redundancy_group", "failure_domain"]).count() == 8
+assert CustomField.objects.filter(name__in=["observed_software_version", "minimum_approved_version", "version_compliance", "version_evidence_source", "version_observed_at", "workload_software_versions", "redundancy_group", "failure_domain", "reconciliation_status"]).count() == 9
 assert Device.objects.filter(tenant__group__slug="showcase-organizations", platform__isnull=False).count() >= 21
 assert Service.objects.filter(parent_object_type__app_label="dcim", parent_object_type__model="device").count() >= 5
 assert CircuitTermination.objects.filter(circuit__tenant__group__slug="showcase-organizations", term_side="A", termination_type__app_label="dcim", termination_type__model="interface").count() >= 4
@@ -62,6 +62,7 @@ assert TunnelTermination.objects.filter(tunnel__group__slug="showcase-hybrid-con
 for name in ["ns-phx-app-01", "ns-phx-app-02", "ns-reno-edge-01", "sum-cloud-edge-01"]:
     dev = Device.objects.get(name=name)
     assert dev.custom_field_data["observed_software_version"]
+    assert dev.custom_field_data["reconciliation_status"] == "matched"
     assert dev.custom_field_data["minimum_approved_version"]
     assert dev.custom_field_data["version_compliance"] == "meets-example-policy"
     assert dev.custom_field_data["version_evidence_source"] == "sanitized-lab-seed"
