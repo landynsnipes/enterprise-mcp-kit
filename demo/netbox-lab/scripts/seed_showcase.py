@@ -17,7 +17,7 @@ from dcim.models import (
     Region,
     Site,
 )
-from extras.models import CustomField
+from extras.models import CustomField, CustomFieldChoiceSet
 from ipam.models import IPAddress, Prefix, Service, VLAN, VRF
 from tenancy.models import Contact, ContactAssignment, ContactGroup, ContactRole, Tenant, TenantGroup
 from virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
@@ -340,6 +340,10 @@ for field_name, label, description in version_fields:
     )
     field.object_types.set([device_content_type, virtual_machine_content_type, cluster_content_type])
 
+reconciliation_choices = save(CustomFieldChoiceSet, {"name": "Reconciliation status"}, {"extra_choices": [[value, value] for value in ["matched", "drifted", "missing-observation", "exception", "not-evaluated"]]})
+reconciliation_field = save(CustomField, {"name": "reconciliation_status"}, {"label": "Reconciliation status", "type": "select", "choice_set": reconciliation_choices, "description": "Recorded comparison state; not live operational state", "required": False, "weight": 110})
+reconciliation_field.object_types.set([device_content_type])
+
 network_platform = save(
     Platform,
     {"slug": "example-network-os"},
@@ -389,6 +393,7 @@ for dev in devices.values():
             "version_observed_at": "2026-07-28T12:00:00Z",
             "redundancy_group": group,
             "failure_domain": domain,
+            "reconciliation_status": "matched",
         }
     )
     dev.full_clean()

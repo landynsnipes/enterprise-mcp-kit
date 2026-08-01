@@ -58,19 +58,25 @@ failure, not a reason to broaden the token.
 ## Governance and audit boundary
 
 The governance HTTP gateway accepts only verified OIDC access tokens. It may
-create, approve, reject, and retrieve tenant-scoped dry-run plans; it exposes
-no executor and must not be configured with a NetBox write token. Store
+create, approve, reject, and retrieve tenant-scoped plans. Its optional first
+executor admits only `netbox.device.metadata.update` for the exact
+`reconciliation_status` enum on one numeric device ID. It binds approval to the
+captured prior value and `last_updated`, verifies the PATCH response, and can
+restore the recorded prior value. Store
 governance snapshots and audit events on durable, access-controlled storage;
 back up and restore that store together with the operational records required
 for audit retention.
 
-The pre-write gate admits only `planner`, `approver`, and `auditor` roles and
+The gate admits only `planner`, `approver`, `executor`, and `auditor` roles and
 maps them to fixed capabilities in application code. Unknown realm roles grant
 no governance access. A plan initiator cannot approve or reject that plan even
 if the identity has both roles. Every mutation requires an `Idempotency-Key`;
 the local reference persists request digests and receipts atomically so an
 identical retry returns the original result and conflicting reuse is denied.
-Production deployments must replace the single-process file store with a
+The initiator and approver cannot execute that same plan. Execution is off by
+default; enabling it requires `GOVERNANCE_EXECUTION_ENABLED=true`, an exact
+NetBox base URL, and a separate write token restricted to `view` and `change`
+on the admitted device set. Production deployments must replace the single-process file store with a
 transactional, access-controlled store that provides cross-instance locking
 and append-only audit retention before enabling execution.
 

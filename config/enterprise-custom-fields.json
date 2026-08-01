@@ -117,7 +117,7 @@
       "type": "selection",
       "choices": ["matched", "drifted", "missing-observation", "exception", "not-evaluated"],
       "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine"],
-      "status": "planned",
+      "status": "implemented-showcase",
       "purpose": "Comparison state between intended and observed evidence"
     },
     {
