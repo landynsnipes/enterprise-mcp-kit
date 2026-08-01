@@ -15,3 +15,10 @@ test('fails closed on tenant, stale-version, field, or value mismatch without pa
     { deviceId: 7, tenantId: 'northstar', field: 'reconciliation_status', expectedValue: 'matched', newValue: 'arbitrary', expectedLastUpdated: before.last_updated },
   ]) { let calls = 0; const writer = new NetBoxDeviceMetadataWriter({ baseUrl: 'https://netbox.example', token: 'secret-token', fetch: async () => { calls++; return new Response(JSON.stringify(before)); } }); await assert.rejects(writer.updateReconciliationStatus(input as never), NetBoxWriteError); assert.ok(calls <= 1); }
 });
+test('updates one admitted software-version field and verifies the exact patch', async () => {
+  const versioned = { ...before, custom_fields: { ...before.custom_fields, observed_software_version: '12.4.3' } }; const calls: string[] = [];
+  const writer = new NetBoxDeviceMetadataWriter({ baseUrl: 'https://netbox.example', token: 'secret-token', fetch: async (_url, init) => { calls.push(String(init?.body ?? 'GET')); return new Response(JSON.stringify(init?.method === 'GET' ? versioned : { ...versioned, last_updated: '2026-08-01T12:02:00Z', custom_fields: { ...versioned.custom_fields, observed_software_version: '12.4.4' } })); } });
+  const result = await writer.updateDeviceMetadata({ deviceId: 7, tenantId: 'northstar', field: 'observed_software_version', expectedValue: '12.4.3', newValue: '12.4.4', expectedLastUpdated: before.last_updated });
+  assert.equal(result.afterValue, '12.4.4'); assert.deepEqual(JSON.parse(calls[1]), { custom_fields: { observed_software_version: '12.4.4' } });
+  await assert.rejects(writer.updateDeviceMetadata({ deviceId: 7, tenantId: 'northstar', field: 'observed_software_version', expectedValue: '12.4.3', newValue: 'version with spaces', expectedLastUpdated: before.last_updated }), NetBoxWriteError);
+});

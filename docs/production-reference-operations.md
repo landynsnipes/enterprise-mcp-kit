@@ -60,9 +60,19 @@ failure, not a reason to broaden the token.
 The governance HTTP gateway accepts only verified OIDC access tokens. It may
 create, approve, reject, and retrieve tenant-scoped plans. Its optional first
 executor admits only `netbox.device.metadata.update` for the exact
-`reconciliation_status` enum on one numeric device ID. It binds approval to the
+`reconciliation_status` enum or `netbox.device.software-version.update` for
+`observed_software_version` and `minimum_approved_version` on one numeric device
+ID. Version values use a bounded 64-character identifier grammar. It binds approval to the
 captured prior value and `last_updated`, verifies the PATCH response, and can
 restore the recorded prior value. Store
+
+Future broader engineer workflows should accept a versioned customer-site
+manifest rather than arbitrary NetBox requests. The manifest should scope one
+tenant, enumerate intended sites/racks/devices/interfaces/addresses, validate
+references and conflicts, produce an immutable dry-run diff, require approval,
+execute ordered idempotent steps, and retain compensating rollback evidence.
+Site-information maintenance should remain a separate capability with an
+explicit allowlist of address and descriptive fields.
 governance snapshots and audit events on durable, access-controlled storage;
 back up and restore that store together with the operational records required
 for audit retention.
