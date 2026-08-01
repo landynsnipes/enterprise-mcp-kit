@@ -19,6 +19,7 @@
     "demo:identity:up": "bash demo/netbox-lab/scripts/ensure-keycloak-env.sh && docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml up -d keycloak",
     "demo:identity:verify": "bash demo/netbox-lab/scripts/verify-governance-identity.sh",
     "demo:write:verify": "bash demo/netbox-lab/scripts/verify-governance-write.sh",
+    "demo:write:verify:software": "bash demo/netbox-lab/scripts/verify-software-version-write.sh",
     "demo:status": "docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml ps",
     "demo:down": "docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml down",
     "demo:seed": "bash demo/netbox-lab/scripts/seed.sh",

@@ -105,7 +105,8 @@ action plans; maps only admitted OIDC roles to fixed capabilities; enforces
 tenant isolation and initiator/approver separation; requires durable
 idempotency keys for mutations; supports approval or rejection with expiry;
 and records auditable lifecycle events. Its first optional write is deliberately
-limited to one device custom field, `reconciliation_status`, and requires a
+limited to the device fields `reconciliation_status`,
+`observed_software_version`, and `minimum_approved_version`, and requires a
 third `executor` identity, a captured prior value and `last_updated` version,
 post-write verification, and a recorded rollback. RS256 access tokens must carry the
 configured issuer, audience, authorized party, issued-at time, JWT ID, tenant,
@@ -142,12 +143,15 @@ npm run demo:seed:showcase
 npm run demo:verify:showcase
 npm run demo:identity:verify
 npm run demo:write:verify
+npm run demo:write:verify:software
 ```
 
 The bounded-write proof changes the sanitized showcase device from `matched`
 to `drifted`, verifies the exact response, replays the idempotent execution,
 then restores `matched`. These are recorded metadata values, not claims about
 live routing, electrical state, or actual configuration drift.
+The software-version proof similarly records `12.4.4`, verifies it, and restores
+`12.4.3`; it does not claim to inspect or change software running on a device.
 
 ## References
 

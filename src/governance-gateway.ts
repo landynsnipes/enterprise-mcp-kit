@@ -30,7 +30,7 @@ export class GovernanceGateway {
           const prepared = governance.prepareExecution(actor, planId);
           try {
             const operation = prepared.operation!;
-            const write = await this.options.writer.updateReconciliationStatus({ ...operation, deviceId: Number(prepared.target.id), tenantId: prepared.tenantId });
+            const write = await this.options.writer.updateDeviceMetadata({ ...operation, deviceId: Number(prepared.target.id), tenantId: prepared.tenantId });
             result = governance.completeExecution(actor, planId, write);
           } catch (error) {
             result = governance.failExecution(actor, planId, safeExecutionReason(error));
@@ -38,7 +38,7 @@ export class GovernanceGateway {
         } else {
           const prepared = governance.prepareRollback(actor, planId); const prior = prepared.execution!;
           try {
-            const write = await this.options.writer.updateReconciliationStatus({ deviceId: prior.deviceId, tenantId: prepared.tenantId, field: 'reconciliation_status', expectedValue: prior.afterValue, newValue: prior.beforeValue, expectedLastUpdated: prior.afterLastUpdated });
+            const write = await this.options.writer.updateDeviceMetadata({ deviceId: prior.deviceId, tenantId: prepared.tenantId, field: prior.field, expectedValue: prior.afterValue, newValue: prior.beforeValue, expectedLastUpdated: prior.afterLastUpdated });
             result = governance.completeRollback(actor, planId, write);
           } catch (error) {
             result = governance.failRollback(actor, planId, safeExecutionReason(error));

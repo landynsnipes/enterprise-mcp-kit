@@ -33,6 +33,11 @@ test('executes and rolls back only an approved exact operation with three-person
   const rolledBack = governance.completeRollback(executor, plan.id, { deviceId: 7, deviceName: 'edge-01', tenantId: 'northstar', field: 'reconciliation_status', beforeValue: 'drifted', afterValue: 'matched', beforeLastUpdated: '2026-07-29T12:00:01Z', afterLastUpdated: '2026-07-29T12:00:02Z', source: 'api/dcim/devices/7/' }); assert.equal(rolledBack.state, 'rolled_back');
   assert.deepEqual(governance.listAuditEvents(executor, plan.id).map((event) => event.event), ['plan_created', 'plan_approved', 'execution_started', 'execution_succeeded', 'rollback_started', 'rollback_succeeded']);
 });
+test('admits a strict software-version operation but rejects mismatched action types', () => {
+  let id = 0; const governance = new InMemoryActionGovernance(clock, () => `version-${++id}`); const input = { ...planInput, actionType: 'netbox.device.software-version.update', proposedChange: 'Record observed version 12.4.4.', operation: { field: 'observed_software_version' as const, expectedValue: '12.4.3', newValue: '12.4.4', expectedLastUpdated: '2026-07-29T11:59:00Z' } };
+  const plan = governance.createPlan(planner, input); governance.approvePlan(approver, plan.id, 'Version evidence reviewed.'); assert.equal(governance.prepareExecution(executor, plan.id).state, 'executing');
+  const bad = governance.createPlan(planner, { ...input, actionType: 'netbox.device.metadata.update' }); governance.approvePlan(approver, bad.id, 'Wrong action test.'); assert.throws(() => governance.prepareExecution(executor, bad.id));
+});
 test('enforces separation of duties even when an identity has both roles', () => {
   const governance = new InMemoryActionGovernance(clock, () => 'plan-1');
   const dualRole = { subjectId: 'dual-1', tenantId: 'northstar', roles: ['planner', 'approver'] };
