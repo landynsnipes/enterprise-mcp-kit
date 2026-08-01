@@ -101,8 +101,12 @@ test/
 
 The repository also includes a provider-neutral, in-memory governance contract
 for future consequential actions. It creates evidence-backed, tenant-scoped
-action plans; supports separately authorized approval or rejection with expiry;
-and records auditable lifecycle events. It intentionally exposes no execution
+action plans; maps only admitted OIDC roles to fixed capabilities; enforces
+tenant isolation and initiator/approver separation; requires durable
+idempotency keys for mutations; supports approval or rejection with expiry;
+and records auditable lifecycle events. RS256 access tokens must carry the
+configured issuer, audience, authorized party, issued-at time, JWT ID, tenant,
+and admitted roles. It intentionally exposes no execution
 operation and is not connected to a NetBox write token or endpoint.
 
 The read-only NetBox adapter and stdio MCP server are implemented with mocked

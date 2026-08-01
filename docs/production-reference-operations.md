@@ -64,6 +64,16 @@ governance snapshots and audit events on durable, access-controlled storage;
 back up and restore that store together with the operational records required
 for audit retention.
 
+The pre-write gate admits only `planner`, `approver`, and `auditor` roles and
+maps them to fixed capabilities in application code. Unknown realm roles grant
+no governance access. A plan initiator cannot approve or reject that plan even
+if the identity has both roles. Every mutation requires an `Idempotency-Key`;
+the local reference persists request digests and receipts atomically so an
+identical retry returns the original result and conflicting reuse is denied.
+Production deployments must replace the single-process file store with a
+transactional, access-controlled store that provides cross-instance locking
+and append-only audit retention before enabling execution.
+
 ## Backup, restore, and rollback
 
 For the pinned local reference, run `npm run demo:recovery:verify` after the
