@@ -106,8 +106,10 @@ tenant isolation and initiator/approver separation; requires durable
 idempotency keys for mutations; supports approval or rejection with expiry;
 and records auditable lifecycle events. Its first optional write is deliberately
 limited to the device fields `reconciliation_status`,
-`observed_software_version`, and `minimum_approved_version`, and requires a
-third `executor` identity, a captured prior value and `last_updated` version,
+`observed_software_version`, and `minimum_approved_version`. A separate bounded
+site-information path admits `physical_address`, `shipping_address`,
+`description`, `facility`, and `time_zone`. Every write requires a third
+`executor` identity, a captured prior value and `last_updated` version,
 post-write verification, and a recorded rollback. RS256 access tokens must carry the
 configured issuer, audience, authorized party, issued-at time, JWT ID, tenant,
 and admitted roles. Execution remains disabled by default and requires an
@@ -144,6 +146,7 @@ npm run demo:verify:showcase
 npm run demo:identity:verify
 npm run demo:write:verify
 npm run demo:write:verify:software
+npm run demo:write:verify:site
 ```
 
 The bounded-write proof changes the sanitized showcase device from `matched`

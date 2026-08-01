@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { requireCapability } from './governance-capabilities.js';
 import type { DeviceMetadataChange, DeviceMetadataWriteResult } from './netbox-metadata-writer.js';
+import type { SiteInformationChange, SiteInformationWriteResult } from './netbox-site-writer.js';
+type GovernedChange = DeviceMetadataChange | SiteInformationChange; type GovernedWriteResult = DeviceMetadataWriteResult | SiteInformationWriteResult;
 
 export type PlanState = 'planned' | 'approved' | 'rejected' | 'expired' | 'executing' | 'executed' | 'execution_failed' | 'rolling_back' | 'rolled_back' | 'rollback_failed';
 
@@ -24,7 +26,7 @@ export interface CreateActionPlan {
   ruleVersion: string;
   promptVersion: string | null;
   expiresAt: string;
-  operation?: DeviceMetadataChange | null;
+  operation?: GovernedChange | null;
 }
 
 export interface GovernanceAuditEvent {
@@ -46,9 +48,9 @@ export interface ActionPlan extends CreateActionPlan {
   approvedBy: string | null;
   approvedAt: string | null;
   approvalReason: string | null;
-  operation: DeviceMetadataChange | null;
-  execution: (DeviceMetadataWriteResult & { executedBy: string; executedAt: string }) | null;
-  rollback: (DeviceMetadataWriteResult & { rolledBackBy: string; rolledBackAt: string }) | null;
+  operation: GovernedChange | null;
+  execution: (GovernedWriteResult & { executedBy: string; executedAt: string }) | null;
+  rollback: (GovernedWriteResult & { rolledBackBy: string; rolledBackAt: string }) | null;
 }
 export interface GovernanceOperationReceipt { key: string; tenantId: string; actorId: string; operation: string; requestDigest: string; planId: string; recordedAt: string; }
 export interface GovernanceSnapshot { version: 2; plans: ActionPlan[]; events: GovernanceAuditEvent[]; receipts: GovernanceOperationReceipt[]; }
@@ -116,19 +118,19 @@ export class InMemoryActionGovernance {
     if (plan.initiatedBy === actor.subjectId || plan.approvedBy === actor.subjectId) throw new GovernanceAuthorizationError('Plan initiators and approvers cannot execute the same plan.');
     if (new Date(plan.expiresAt).getTime() <= this.now().getTime()) { plan.state = 'expired'; this.record(plan, 'plan_expired', 'system', null); throw new GovernanceStateError('Action plan expired before execution.'); }
     if (plan.state !== 'approved') throw new GovernanceStateError(`Action plan cannot be executed from state ${plan.state}.`);
-    const admittedAction = plan.operation?.field === 'reconciliation_status' ? 'netbox.device.metadata.update' : 'netbox.device.software-version.update';
-    if (plan.actionType !== admittedAction || plan.target.kind !== 'netbox-device' || !/^\d+$/.test(plan.target.id) || !plan.operation) throw new GovernanceValidationError('Action plan does not contain an admitted executable operation.');
+    const site = plan.target.kind === 'netbox-site'; const admittedAction = site ? 'netbox.site.information.update' : plan.operation?.field === 'reconciliation_status' ? 'netbox.device.metadata.update' : 'netbox.device.software-version.update';
+    if (plan.actionType !== admittedAction || !['netbox-device', 'netbox-site'].includes(plan.target.kind) || !/^\d+$/.test(plan.target.id) || !plan.operation || (site !== isSiteChange(plan.operation))) throw new GovernanceValidationError('Action plan does not contain an admitted executable operation.');
     validateOperation(plan.operation); plan.state = 'executing'; this.record(plan, 'execution_started', actor.subjectId, null); return copyPlan(plan);
   }
-  completeExecution(actor: GovernanceActor, planId: string, result: DeviceMetadataWriteResult): ActionPlan {
-    const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'executing' || !plan.operation || Number(plan.target.id) !== result.deviceId || plan.tenantId !== result.tenantId || result.field !== plan.operation.field || result.beforeValue !== plan.operation.expectedValue || result.afterValue !== plan.operation.newValue || result.beforeLastUpdated !== plan.operation.expectedLastUpdated) throw new GovernanceStateError('Execution result does not match the prepared plan.');
+  completeExecution(actor: GovernanceActor, planId: string, result: GovernedWriteResult): ActionPlan {
+    const plan = this.getOwnedPlan(actor, planId); const resultId = 'deviceId' in result ? result.deviceId : result.siteId; if (plan.state !== 'executing' || !plan.operation || Number(plan.target.id) !== resultId || plan.tenantId !== result.tenantId || result.field !== plan.operation.field || result.beforeValue !== plan.operation.expectedValue || result.afterValue !== plan.operation.newValue || result.beforeLastUpdated !== plan.operation.expectedLastUpdated) throw new GovernanceStateError('Execution result does not match the prepared plan.');
     plan.execution = { ...result, executedBy: actor.subjectId, executedAt: this.now().toISOString() }; plan.state = 'executed'; this.record(plan, 'execution_succeeded', actor.subjectId, null); return copyPlan(plan);
   }
   failExecution(actor: GovernanceActor, planId: string, reason: string): ActionPlan { const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'executing') throw new GovernanceStateError('Action plan is not executing.'); plan.state = 'execution_failed'; this.record(plan, 'execution_failed', actor.subjectId, reason); return copyPlan(plan); }
   prepareRollback(actor: GovernanceActor, planId: string): ActionPlan {
     requireCapability(actor, 'plan:execute'); const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'executed' || !plan.execution || !plan.operation) throw new GovernanceStateError(`Action plan cannot be rolled back from state ${plan.state}.`); plan.state = 'rolling_back'; this.record(plan, 'rollback_started', actor.subjectId, null); return copyPlan(plan);
   }
-  completeRollback(actor: GovernanceActor, planId: string, result: DeviceMetadataWriteResult): ActionPlan { const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'rolling_back' || !plan.execution || result.deviceId !== plan.execution.deviceId || result.tenantId !== plan.tenantId || result.field !== plan.execution.field || result.beforeValue !== plan.execution.afterValue || result.afterValue !== plan.execution.beforeValue || result.beforeLastUpdated !== plan.execution.afterLastUpdated) throw new GovernanceStateError('Rollback result does not restore the recorded prior value.'); plan.rollback = { ...result, rolledBackBy: actor.subjectId, rolledBackAt: this.now().toISOString() }; plan.state = 'rolled_back'; this.record(plan, 'rollback_succeeded', actor.subjectId, null); return copyPlan(plan); }
+  completeRollback(actor: GovernanceActor, planId: string, result: GovernedWriteResult): ActionPlan { const plan = this.getOwnedPlan(actor, planId); const resultId = 'deviceId' in result ? result.deviceId : result.siteId; const priorId = plan.execution && ('deviceId' in plan.execution ? plan.execution.deviceId : plan.execution.siteId); if (plan.state !== 'rolling_back' || !plan.execution || resultId !== priorId || result.tenantId !== plan.tenantId || result.field !== plan.execution.field || result.beforeValue !== plan.execution.afterValue || result.afterValue !== plan.execution.beforeValue || result.beforeLastUpdated !== plan.execution.afterLastUpdated) throw new GovernanceStateError('Rollback result does not restore the recorded prior value.'); plan.rollback = { ...result, rolledBackBy: actor.subjectId, rolledBackAt: this.now().toISOString() }; plan.state = 'rolled_back'; this.record(plan, 'rollback_succeeded', actor.subjectId, null); return copyPlan(plan); }
   failRollback(actor: GovernanceActor, planId: string, reason: string): ActionPlan { const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'rolling_back') throw new GovernanceStateError('Action plan is not rolling back.'); plan.state = 'rollback_failed'; this.record(plan, 'rollback_failed', actor.subjectId, reason); return copyPlan(plan); }
 
   getPlan(actor: GovernanceActor, planId: string): ActionPlan {
@@ -164,4 +166,5 @@ export class InMemoryActionGovernance {
 
 function isExactText(value: unknown): value is string { return typeof value === 'string' && value.length > 0 && value.trim() === value; }
 function copyPlan(plan: ActionPlan): ActionPlan { return { ...plan, evidence: plan.evidence.map((item) => ({ ...item })), target: { ...plan.target }, operation: plan.operation ? { ...plan.operation } : null, execution: plan.execution ? { ...plan.execution } : null, rollback: plan.rollback ? { ...plan.rollback } : null }; }
-function validateOperation(operation: DeviceMetadataChange): void { const statuses = ['matched', 'drifted', 'missing-observation', 'exception', 'not-evaluated']; const version = (value: unknown) => value === null || (typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._+:-]{0,63}$/.test(value)); const valid = operation?.field === 'reconciliation_status' ? (operation.expectedValue === null || statuses.includes(String(operation.expectedValue))) && (operation.newValue !== null && statuses.includes(String(operation.newValue))) : ['observed_software_version', 'minimum_approved_version'].includes(operation?.field) && version(operation.expectedValue) && version(operation.newValue); if (!operation || !valid || operation.expectedValue === operation.newValue || !isExactText(operation.expectedLastUpdated) || Number.isNaN(Date.parse(operation.expectedLastUpdated))) throw new GovernanceValidationError('Device metadata operation is invalid.'); }
+function validateOperation(operation: GovernedChange): void { const statuses = ['matched', 'drifted', 'missing-observation', 'exception', 'not-evaluated']; const version = (value: unknown) => value === null || (typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._+:-]{0,63}$/.test(value)); const site = isSiteChange(operation); const validSite = site && typeof operation.expectedValue === 'string' && typeof operation.newValue === 'string' && operation.newValue.length <= 200 && operation.newValue.trim() === operation.newValue && !/[\u0000-\u001f\u007f]/.test(operation.newValue); const validDevice = !site && (operation.field === 'reconciliation_status' ? (operation.expectedValue === null || statuses.includes(String(operation.expectedValue))) && (operation.newValue !== null && statuses.includes(String(operation.newValue))) : ['observed_software_version', 'minimum_approved_version'].includes(operation.field) && version(operation.expectedValue) && version(operation.newValue)); if (!operation || !(validSite || validDevice) || operation.expectedValue === operation.newValue || !isExactText(operation.expectedLastUpdated) || Number.isNaN(Date.parse(operation.expectedLastUpdated))) throw new GovernanceValidationError('Governed write operation is invalid.'); }
+function isSiteChange(operation: GovernedChange): operation is SiteInformationChange { return ['physical_address', 'shipping_address', 'description', 'facility', 'time_zone'].includes(operation?.field); }
