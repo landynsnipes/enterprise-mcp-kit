@@ -4,8 +4,9 @@ import secrets
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from circuits.models import Circuit, CircuitTermination
-from dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, PowerFeed, PowerOutlet, PowerPort, Rack, Site
-from tenancy.models import ContactAssignment
+from dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, PowerFeed, PowerOutlet, PowerPort, Rack, Site
+from ipam.models import IPAddress
+from tenancy.models import ContactAssignment, Tenant
 from users.models import ObjectPermission, Token
 from vpn.models import Tunnel, TunnelTermination
 from extras.models import CustomField, CustomFieldChoiceSet, Dashboard
@@ -16,6 +17,8 @@ USERNAME = "demo-mcp"
 TOKEN_DESCRIPTION = "Enterprise MCP Kit disposable lab"
 WRITER_USERNAME = "demo-mcp-writer"
 WRITER_TOKEN_DESCRIPTION = "Enterprise MCP Kit bounded metadata writer"
+PROVISIONER_USERNAME = "demo-mcp-provisioner"
+PROVISIONER_TOKEN_DESCRIPTION = "Enterprise MCP Kit customer-site provisioner"
 
 site, _ = Site.objects.update_or_create(
     slug="phoenix-lab",
@@ -118,6 +121,33 @@ site_write_permission, _ = ObjectPermission.objects.update_or_create(
 site_write_permission.object_types.set([ContentType.objects.get_for_model(Site)])
 site_write_permission.users.set([writer])
 
+provisioner, _ = User.objects.get_or_create(username=PROVISIONER_USERNAME)
+provisioner.is_active = True
+provisioner.is_staff = False
+provisioner.is_superuser = False
+provisioner.email = "demo-mcp-provisioner@example.test"
+provisioner.set_unusable_password()
+provisioner.save()
+provision_reference_permission, _ = ObjectPermission.objects.update_or_create(
+    name="Enterprise MCP Kit provisioning reference discovery",
+    defaults={"description": "View only reference records required by customer-site provisioning", "enabled": True, "actions": ["view"], "constraints": {}},
+)
+provision_reference_permission.object_types.set([
+    ContentType.objects.get_for_model(Tenant), ContentType.objects.get_for_model(DeviceType),
+    ContentType.objects.get_for_model(DeviceRole), ContentType.objects.get_for_model(Platform),
+])
+provision_reference_permission.users.set([provisioner])
+provision_record_permission, _ = ObjectPermission.objects.update_or_create(
+    name="Enterprise MCP Kit bounded customer-site provisioning",
+    defaults={"description": "View, add, and delete only record types admitted by the bounded provisioning adapter", "enabled": True, "actions": ["view", "add", "delete"], "constraints": {}},
+)
+provision_record_permission.object_types.set([
+    ContentType.objects.get_for_model(Site), ContentType.objects.get_for_model(Rack),
+    ContentType.objects.get_for_model(Device), ContentType.objects.get_for_model(Interface),
+    ContentType.objects.get_for_model(IPAddress),
+])
+provision_record_permission.users.set([provisioner])
+
 Token.objects.filter(user=user, description=TOKEN_DESCRIPTION).delete()
 plaintext = secrets.token_urlsafe(30)
 token = Token(
@@ -134,6 +164,12 @@ writer_plaintext = secrets.token_urlsafe(30)
 writer_token = Token(user=writer, description=WRITER_TOKEN_DESCRIPTION, version=2, token=writer_plaintext, write_enabled=True)
 writer_token.save()
 
+Token.objects.filter(user=provisioner, description=PROVISIONER_TOKEN_DESCRIPTION).delete()
+provisioner_plaintext = secrets.token_urlsafe(30)
+provisioner_token = Token(user=provisioner, description=PROVISIONER_TOKEN_DESCRIPTION, version=2, token=provisioner_plaintext, write_enabled=True)
+provisioner_token.save()
+
 print(f"PHASE_B_TOKEN=nbt_{token.key}.{plaintext}")
 print(f"PHASE_B_WRITE_TOKEN=nbt_{writer_token.key}.{writer_plaintext}")
+print(f"PHASE_B_PROVISION_TOKEN=nbt_{provisioner_token.key}.{provisioner_plaintext}")
 print(f"PHASE_B_DEVICE_ID={device.pk}")

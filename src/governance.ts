@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { requireCapability } from './governance-capabilities.js';
 import type { DeviceMetadataChange, DeviceMetadataWriteResult } from './netbox-metadata-writer.js';
 import type { SiteInformationChange, SiteInformationWriteResult } from './netbox-site-writer.js';
+import type { CustomerSiteManifest } from './site-provisioning-manifest.js';
+import type { SiteProvisioningExecution } from './site-provisioning-executor.js';
 type GovernedChange = DeviceMetadataChange | SiteInformationChange; type GovernedWriteResult = DeviceMetadataWriteResult | SiteInformationWriteResult;
+export interface GovernedSiteProvisioning { manifest: CustomerSiteManifest; manifestDigest: string; }
 
 export type PlanState = 'planned' | 'approved' | 'rejected' | 'expired' | 'executing' | 'executed' | 'execution_failed' | 'rolling_back' | 'rolled_back' | 'rollback_failed';
 
@@ -27,6 +30,7 @@ export interface CreateActionPlan {
   promptVersion: string | null;
   expiresAt: string;
   operation?: GovernedChange | null;
+  provisioning?: GovernedSiteProvisioning | null;
 }
 
 export interface GovernanceAuditEvent {
@@ -49,8 +53,9 @@ export interface ActionPlan extends CreateActionPlan {
   approvedAt: string | null;
   approvalReason: string | null;
   operation: GovernedChange | null;
-  execution: (GovernedWriteResult & { executedBy: string; executedAt: string }) | null;
-  rollback: (GovernedWriteResult & { rolledBackBy: string; rolledBackAt: string }) | null;
+  provisioning: GovernedSiteProvisioning | null;
+  execution: ((GovernedWriteResult | SiteProvisioningExecution) & { executedBy: string; executedAt: string }) | null;
+  rollback: ((GovernedWriteResult | SiteProvisioningExecution) & { rolledBackBy: string; rolledBackAt: string }) | null;
 }
 export interface GovernanceOperationReceipt { key: string; tenantId: string; actorId: string; operation: string; requestDigest: string; planId: string; recordedAt: string; }
 export interface GovernanceSnapshot { version: 2; plans: ActionPlan[]; events: GovernanceAuditEvent[]; receipts: GovernanceOperationReceipt[]; }
@@ -83,7 +88,7 @@ export class InMemoryActionGovernance {
     requireCapability(actor, 'plan:create');
     this.validateInput(input);
     const createdAt = this.now().toISOString();
-    const plan: ActionPlan = { ...input, operation: input.operation ?? null, id: this.newId(), tenantId: actor.tenantId, initiatedBy: actor.subjectId, state: 'planned', createdAt, approvedBy: null, approvedAt: null, approvalReason: null, execution: null, rollback: null };
+    const plan: ActionPlan = { ...input, operation: input.operation ?? null, provisioning: input.provisioning ?? null, id: this.newId(), tenantId: actor.tenantId, initiatedBy: actor.subjectId, state: 'planned', createdAt, approvedBy: null, approvedAt: null, approvalReason: null, execution: null, rollback: null };
     this.plans.set(plan.id, plan);
     this.record(plan, 'plan_created', actor.subjectId, null);
     return { ...plan, evidence: [...plan.evidence] };
@@ -118,19 +123,26 @@ export class InMemoryActionGovernance {
     if (plan.initiatedBy === actor.subjectId || plan.approvedBy === actor.subjectId) throw new GovernanceAuthorizationError('Plan initiators and approvers cannot execute the same plan.');
     if (new Date(plan.expiresAt).getTime() <= this.now().getTime()) { plan.state = 'expired'; this.record(plan, 'plan_expired', 'system', null); throw new GovernanceStateError('Action plan expired before execution.'); }
     if (plan.state !== 'approved') throw new GovernanceStateError(`Action plan cannot be executed from state ${plan.state}.`);
-    const site = plan.target.kind === 'netbox-site'; const admittedAction = site ? 'netbox.site.information.update' : plan.operation?.field === 'reconciliation_status' ? 'netbox.device.metadata.update' : 'netbox.device.software-version.update';
-    if (plan.actionType !== admittedAction || !['netbox-device', 'netbox-site'].includes(plan.target.kind) || !/^\d+$/.test(plan.target.id) || !plan.operation || (site !== isSiteChange(plan.operation))) throw new GovernanceValidationError('Action plan does not contain an admitted executable operation.');
-    validateOperation(plan.operation); plan.state = 'executing'; this.record(plan, 'execution_started', actor.subjectId, null); return copyPlan(plan);
+    if (plan.provisioning) {
+      if (plan.actionType !== 'netbox.customer-site.provision' || plan.target.kind !== 'netbox-site-manifest' || plan.target.id !== plan.provisioning.manifest.site.slug || plan.operation || plan.provisioning.manifest.tenantSlug !== plan.tenantId || !/^[a-f0-9]{64}$/.test(plan.provisioning.manifestDigest)) throw new GovernanceValidationError('Action plan does not contain an admitted provisioning operation.');
+    } else {
+      const site = plan.target.kind === 'netbox-site'; const admittedAction = site ? 'netbox.site.information.update' : plan.operation?.field === 'reconciliation_status' ? 'netbox.device.metadata.update' : 'netbox.device.software-version.update';
+      if (plan.actionType !== admittedAction || !['netbox-device', 'netbox-site'].includes(plan.target.kind) || !/^\d+$/.test(plan.target.id) || !plan.operation || (site !== isSiteChange(plan.operation))) throw new GovernanceValidationError('Action plan does not contain an admitted executable operation.');
+      validateOperation(plan.operation);
+    }
+    plan.state = 'executing'; this.record(plan, 'execution_started', actor.subjectId, null); return copyPlan(plan);
   }
   completeExecution(actor: GovernanceActor, planId: string, result: GovernedWriteResult): ActionPlan {
     const plan = this.getOwnedPlan(actor, planId); const resultId = 'deviceId' in result ? result.deviceId : result.siteId; if (plan.state !== 'executing' || !plan.operation || Number(plan.target.id) !== resultId || plan.tenantId !== result.tenantId || result.field !== plan.operation.field || result.beforeValue !== plan.operation.expectedValue || result.afterValue !== plan.operation.newValue || result.beforeLastUpdated !== plan.operation.expectedLastUpdated) throw new GovernanceStateError('Execution result does not match the prepared plan.');
     plan.execution = { ...result, executedBy: actor.subjectId, executedAt: this.now().toISOString() }; plan.state = 'executed'; this.record(plan, 'execution_succeeded', actor.subjectId, null); return copyPlan(plan);
   }
+  completeProvisioningExecution(actor: GovernanceActor, planId: string, result: SiteProvisioningExecution): ActionPlan { const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'executing' || !plan.provisioning || result.state !== 'executed' || result.manifestDigest !== plan.provisioning.manifestDigest) throw new GovernanceStateError('Provisioning result does not match the prepared plan.'); plan.execution = { ...result, created: result.created.map(x=>({...x})), compensated: result.compensated.map(x=>({...x})), errors: [...result.errors], executedBy: actor.subjectId, executedAt: this.now().toISOString() }; plan.state = 'executed'; this.record(plan, 'execution_succeeded', actor.subjectId, null); return copyPlan(plan); }
   failExecution(actor: GovernanceActor, planId: string, reason: string): ActionPlan { const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'executing') throw new GovernanceStateError('Action plan is not executing.'); plan.state = 'execution_failed'; this.record(plan, 'execution_failed', actor.subjectId, reason); return copyPlan(plan); }
   prepareRollback(actor: GovernanceActor, planId: string): ActionPlan {
-    requireCapability(actor, 'plan:execute'); const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'executed' || !plan.execution || !plan.operation) throw new GovernanceStateError(`Action plan cannot be rolled back from state ${plan.state}.`); plan.state = 'rolling_back'; this.record(plan, 'rollback_started', actor.subjectId, null); return copyPlan(plan);
+    requireCapability(actor, 'plan:execute'); const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'executed' || !plan.execution || (!plan.operation && !plan.provisioning)) throw new GovernanceStateError(`Action plan cannot be rolled back from state ${plan.state}.`); plan.state = 'rolling_back'; this.record(plan, 'rollback_started', actor.subjectId, null); return copyPlan(plan);
   }
-  completeRollback(actor: GovernanceActor, planId: string, result: GovernedWriteResult): ActionPlan { const plan = this.getOwnedPlan(actor, planId); const resultId = 'deviceId' in result ? result.deviceId : result.siteId; const priorId = plan.execution && ('deviceId' in plan.execution ? plan.execution.deviceId : plan.execution.siteId); if (plan.state !== 'rolling_back' || !plan.execution || resultId !== priorId || result.tenantId !== plan.tenantId || result.field !== plan.execution.field || result.beforeValue !== plan.execution.afterValue || result.afterValue !== plan.execution.beforeValue || result.beforeLastUpdated !== plan.execution.afterLastUpdated) throw new GovernanceStateError('Rollback result does not restore the recorded prior value.'); plan.rollback = { ...result, rolledBackBy: actor.subjectId, rolledBackAt: this.now().toISOString() }; plan.state = 'rolled_back'; this.record(plan, 'rollback_succeeded', actor.subjectId, null); return copyPlan(plan); }
+  completeRollback(actor: GovernanceActor, planId: string, result: GovernedWriteResult): ActionPlan { const plan = this.getOwnedPlan(actor, planId); const resultId = 'deviceId' in result ? result.deviceId : result.siteId; const prior=plan.execution;if (plan.state !== 'rolling_back' || !prior || !('field'in prior)) throw new GovernanceStateError('Rollback result does not restore the recorded prior value.');const priorId='deviceId'in prior?prior.deviceId:prior.siteId;if(resultId !== priorId || result.tenantId !== plan.tenantId || result.field !== prior.field || result.beforeValue !== prior.afterValue || result.afterValue !== prior.beforeValue || result.beforeLastUpdated !== prior.afterLastUpdated) throw new GovernanceStateError('Rollback result does not restore the recorded prior value.'); plan.rollback = { ...result, rolledBackBy: actor.subjectId, rolledBackAt: this.now().toISOString() }; plan.state = 'rolled_back'; this.record(plan, 'rollback_succeeded', actor.subjectId, null); return copyPlan(plan); }
+  completeProvisioningRollback(actor: GovernanceActor, planId: string, result: SiteProvisioningExecution): ActionPlan { const plan=this.getOwnedPlan(actor,planId); if(plan.state!=='rolling_back'||!plan.provisioning||result.state!=='compensated'||result.manifestDigest!==plan.provisioning.manifestDigest||result.compensated.length!==result.created.length)throw new GovernanceStateError('Provisioning rollback did not remove the complete recorded creation set.');plan.rollback={...result,created:result.created.map(x=>({...x})),compensated:result.compensated.map(x=>({...x})),errors:[...result.errors],rolledBackBy:actor.subjectId,rolledBackAt:this.now().toISOString()};plan.state='rolled_back';this.record(plan,'rollback_succeeded',actor.subjectId,null);return copyPlan(plan);}
   failRollback(actor: GovernanceActor, planId: string, reason: string): ActionPlan { const plan = this.getOwnedPlan(actor, planId); if (plan.state !== 'rolling_back') throw new GovernanceStateError('Action plan is not rolling back.'); plan.state = 'rollback_failed'; this.record(plan, 'rollback_failed', actor.subjectId, reason); return copyPlan(plan); }
 
   getPlan(actor: GovernanceActor, planId: string): ActionPlan {
@@ -160,11 +172,13 @@ export class InMemoryActionGovernance {
     const expires = new Date(input?.expiresAt).getTime(); const now = this.now().getTime();
     if (!input || !isExactText(input.actionType) || !isExactText(input.target?.kind) || !isExactText(input.target?.id) || !isExactText(input.proposedChange) || !isExactText(input.ruleVersion) || !Array.isArray(input.evidence) || input.evidence.length === 0 || input.evidence.length > 20 || !input.evidence.every((item) => isExactText(item.source) && isExactText(item.summary)) || !Number.isFinite(input.confidence) || input.confidence < 0 || input.confidence > 1 || (input.promptVersion !== null && !isExactText(input.promptVersion)) || Number.isNaN(expires) || (requireCurrentWindow && (expires <= now || expires > now + 86_400_000))) throw new GovernanceValidationError('Action plan contains invalid, expired, or excessively long-lived governance metadata.');
     if (input.operation !== undefined && input.operation !== null) validateOperation(input.operation);
+    if (input.provisioning !== undefined && input.provisioning !== null && (!input.provisioning.manifest || input.provisioning.manifest.tenantSlug !== input.provisioning.manifest.tenantSlug.trim() || !/^[a-f0-9]{64}$/.test(input.provisioning.manifestDigest))) throw new GovernanceValidationError('Governed provisioning payload is invalid.');
+    if (input.operation && input.provisioning) throw new GovernanceValidationError('Action plan cannot contain both metadata and provisioning operations.');
   }
-  private validateStoredPlan(plan: ActionPlan): void { this.validateInput(plan, false); if (!isExactText(plan.id) || !isExactText(plan.tenantId) || !isExactText(plan.initiatedBy) || !isExactText(plan.createdAt) || !['planned', 'approved', 'rejected', 'expired', 'executing', 'executed', 'execution_failed', 'rolling_back', 'rolled_back', 'rollback_failed'].includes(plan.state)) throw new GovernanceValidationError('Governance plan snapshot is invalid.'); plan.operation ??= null; plan.execution ??= null; plan.rollback ??= null; }
+  private validateStoredPlan(plan: ActionPlan): void { this.validateInput(plan, false); if (!isExactText(plan.id) || !isExactText(plan.tenantId) || !isExactText(plan.initiatedBy) || !isExactText(plan.createdAt) || !['planned', 'approved', 'rejected', 'expired', 'executing', 'executed', 'execution_failed', 'rolling_back', 'rolled_back', 'rollback_failed'].includes(plan.state)) throw new GovernanceValidationError('Governance plan snapshot is invalid.'); plan.operation ??= null; plan.provisioning ??= null; plan.execution ??= null; plan.rollback ??= null; }
 }
 
 function isExactText(value: unknown): value is string { return typeof value === 'string' && value.length > 0 && value.trim() === value; }
-function copyPlan(plan: ActionPlan): ActionPlan { return { ...plan, evidence: plan.evidence.map((item) => ({ ...item })), target: { ...plan.target }, operation: plan.operation ? { ...plan.operation } : null, execution: plan.execution ? { ...plan.execution } : null, rollback: plan.rollback ? { ...plan.rollback } : null }; }
+function copyPlan(plan: ActionPlan): ActionPlan { return structuredClone(plan); }
 function validateOperation(operation: GovernedChange): void { const statuses = ['matched', 'drifted', 'missing-observation', 'exception', 'not-evaluated']; const version = (value: unknown) => value === null || (typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._+:-]{0,63}$/.test(value)); const site = isSiteChange(operation); const validSite = site && typeof operation.expectedValue === 'string' && typeof operation.newValue === 'string' && operation.newValue.length <= 200 && operation.newValue.trim() === operation.newValue && !/[\u0000-\u001f\u007f]/.test(operation.newValue); const validDevice = !site && (operation.field === 'reconciliation_status' ? (operation.expectedValue === null || statuses.includes(String(operation.expectedValue))) && (operation.newValue !== null && statuses.includes(String(operation.newValue))) : ['observed_software_version', 'minimum_approved_version'].includes(operation.field) && version(operation.expectedValue) && version(operation.newValue)); if (!operation || !(validSite || validDevice) || operation.expectedValue === operation.newValue || !isExactText(operation.expectedLastUpdated) || Number.isNaN(Date.parse(operation.expectedLastUpdated))) throw new GovernanceValidationError('Governed write operation is invalid.'); }
 function isSiteChange(operation: GovernedChange): operation is SiteInformationChange { return ['physical_address', 'shipping_address', 'description', 'facility', 'time_zone'].includes(operation?.field); }
