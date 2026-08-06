@@ -1,9 +1,10 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { GovernanceValidationError, type GovernanceSnapshot } from './governance.js';
+export interface GovernanceStore{load():Promise<GovernanceSnapshot>;save(snapshot:GovernanceSnapshot):Promise<void>;transact<T>(operation:(snapshot:GovernanceSnapshot)=>Promise<{snapshot:GovernanceSnapshot;result:T}>|{snapshot:GovernanceSnapshot;result:T}):Promise<T>;}
 
 /** Local development persistence only. Production storage must provide durable access control and append-only audit retention. */
-export class FileGovernanceStore {
+export class FileGovernanceStore implements GovernanceStore {
   private queue: Promise<void> = Promise.resolve();
   constructor(private readonly path: string) { if (!path || path.trim() !== path) throw new GovernanceValidationError('Governance storage path must be a non-empty exact string.'); }
   async load(): Promise<GovernanceSnapshot> {

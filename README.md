@@ -116,9 +116,17 @@ and admitted roles. Execution remains disabled by default and requires an
 explicitly enabled HTTP gateway plus a separate least-privilege NetBox token.
 The unauthenticated stdio MCP surface remains read-only.
 
+An authenticated stateless Streamable HTTP MCP is available at `/mcp` on the
+governance gateway. It exposes eight strict tools for planning, reading,
+auditing, approving, rejecting, executing, and rolling back admitted actions.
+Every request requires a verified OIDC bearer token; mutations also require a
+tool-level idempotency key. Host-header protection and per-identity rate limits
+are enabled. `/healthz` reports governance-store readiness and `/metrics`
+exports request, error, and latency counters for private operational scraping.
+
 The governed gateway also supports a bounded customer-site manifest for one
-tenant: one site, 1-20 racks, 1-50 devices, and at most 16 interfaces per
-device. Planning performs fixed-endpoint discovery and produces a canonical
+tenant: one site, up to 64 VLANs, up to 64 prefixes, 1-20 racks, 1-50 devices,
+and at most 16 interfaces per device. Planning performs fixed-endpoint discovery and produces a canonical
 digest without writing. A different approver must approve that exact digest
 before a third executor may create records in dependency order through a
 separate provisioner credential. The gateway records every returned ID and can
@@ -157,6 +165,9 @@ npm run demo:write:verify:software
 npm run demo:write:verify:site
 npm run demo:provision:verify
 npm run demo:provision:verify:governed
+npm run demo:governance:mcp:verify
+npm run demo:governance:postgres:verify
+npm run demo:provision:verify:tenant-boundary
 ```
 
 The bounded-write proof changes the sanitized showcase device from `matched`
