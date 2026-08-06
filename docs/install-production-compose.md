@@ -145,3 +145,7 @@ image digest in a controlled release record, run `docker compose up -d`, then
 verify the five read-only tools and the gateway health. Roll back by restoring
 the recorded prior image digests and validated backups; never downgrade a live
 database without the documented restore procedure.
+
+Follow the [enterprise release and rollout runbook](enterprise-release-runbook.md)
+for the CI security gate, SBOM, image-signature verification, non-production
+acceptance, restore drill, and production entry criteria.

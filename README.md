@@ -30,6 +30,8 @@ single-host reference deployment with explicit operator responsibilities, not
 the disposable lab.
 
 See [Install the private Docker Compose production reference](docs/install-production-compose.md).
+The required release evidence and customer deployment entry criteria are in the
+[enterprise release and rollout runbook](docs/enterprise-release-runbook.md).
 
 | Path | You supply | What you get | Intended use |
 | --- | --- | --- | --- |
