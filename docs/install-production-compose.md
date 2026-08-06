@@ -59,6 +59,61 @@ Verify container health on the host, complete NetBox bootstrap, create the
 dedicated read-only MCP service account, and validate the five read tools
 against a non-production instance before connecting an AI client.
 
+## Configure NetBox and the read-only MCP
+
+1. Sign in to `https://<NETBOX_PUBLIC_HOST>` with the temporary bootstrap
+   account, immediately rotate that password, and establish your organization’s
+   real NetBox administrators, tenants, data model, and backup ownership.
+2. Create a dedicated non-staff MCP service account and an API token. Grant
+   only the `view` permissions listed for the five tools in
+   [Production-reference operations](production-reference-operations.md#netbox-least-privilege-roles).
+   Do not grant staff, superuser, token-administration, add, change, or delete
+   permissions.
+3. Keep the read-only MCP process separate from the governed gateway. Run it
+   under your approved workload manager or client-side MCP runtime with
+   `NETBOX_BASE_URL=https://<NETBOX_PUBLIC_HOST>` and the read-only token.
+   The exact stdio-client configuration and use examples are in
+   [Connect an existing NetBox deployment](connect-existing-netbox.md).
+4. Before releasing access to users, exercise each exact tool against approved
+   test data: device context, site overview, connectivity evidence, rack
+   context, and power-path evidence. Confirm the token cannot write.
+
+The Compose bundle does not publish a generic unauthenticated NetBox MCP HTTP
+endpoint. The public MCP route is the separately authenticated governance
+gateway described below.
+
+## Connect and use the governed MCP gateway
+
+After DNS and TLS are healthy, the remote MCP endpoint is:
+
+```text
+https://<MCP_PUBLIC_HOST>/mcp
+```
+
+Configure an MCP client that supports Streamable HTTP and your OIDC provider’s
+bearer-token flow. The client must send a verified access token for the gateway
+audience and an admitted tenant/role mapping. Do not put a bearer token in a
+browser URL, source file, or static client configuration.
+
+The gateway has a distinct job from the read-only MCP. It exposes eight strict
+governance tools for reading and auditing plans plus creating, approving,
+rejecting, executing, and rolling back only admitted actions. Its normal use
+sequence is:
+
+```text
+planner creates a tenant-scoped dry-run plan
+  -> different approver reviews and approves that exact digest
+  -> different executor runs the approved plan with an idempotency key
+  -> auditor reviews the durable event trail; executor can roll back the recorded creation set
+```
+
+Writes are off by default. With the flags still false, use the gateway to
+validate OIDC identity, planning, approval separation, audit retrieval, and
+denial paths. Enable execution only after the safeguards in the next section
+are complete. The accepted capabilities, exact allowed fields, and rollback
+semantics are documented in
+[Production-reference operations](production-reference-operations.md#governance-and-audit-boundary).
+
 ## Enable governed writes
 
 Writes are disabled by default. Do not change either execution flag merely to

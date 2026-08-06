@@ -6,7 +6,7 @@ real operational context.
 
 ## Choose your path
 
-### I already use NetBox
+### 1. NetBox MCP — connect to an existing setup
 
 Run only the MCP server and point it at your existing NetBox deployment. NetBox
 remains your system of record; this project adds narrow, read-only operational
@@ -14,7 +14,7 @@ context tools for AI clients.
 
 See [Connect an existing NetBox deployment](docs/connect-existing-netbox.md).
 
-### I want to evaluate NetBox and the MCP together
+### 2. Full Custom NetBox + MCP — evaluation lab with sanitized data
 
 Launch the optional Docker Compose lab with NetBox, PostgreSQL, Valkey, and the
 supporting worker. The lab provides a reproducible environment for integration
@@ -22,7 +22,7 @@ testing and demonstrations without requiring an existing NetBox installation.
 
 See [Run the complete evaluation lab](docs/run-complete-demo.md).
 
-### I want the full self-hosted production reference
+### 3. Full Custom NetBox + MCP — clean enterprise reference install
 
 Use the private Linux Docker Compose reference for NetBox Community, the
 governed MCP gateway, durable audit storage, and TLS ingress. It is a
@@ -30,6 +30,12 @@ single-host reference deployment with explicit operator responsibilities, not
 the disposable lab.
 
 See [Install the private Docker Compose production reference](docs/install-production-compose.md).
+
+| Path | You supply | What you get | Intended use |
+| --- | --- | --- | --- |
+| NetBox MCP | An existing NetBox URL and read-only token | Five bounded read-only tools | Connect AI clients to approved inventory context |
+| Full lab | A local Docker-capable workstation | Seeded, sanitized NetBox dashboard and read-only MCP | Evaluation, demonstrations, and integration tests |
+| Clean enterprise reference | Private Linux host, DNS, OIDC, secret management, and operations ownership | NetBox Community, TLS ingress, governed MCP gateway, and durable audit store | A controlled self-hosted starting point—not HA or turnkey production |
 
 The FOSS component policy, production boundary, plugin admission process, and
 release gates are documented in
@@ -135,7 +141,9 @@ exports request, error, and latency counters for private operational scraping.
 
 The governed gateway also supports a bounded customer-site manifest for one
 tenant: one site, up to 64 VLANs, up to 64 prefixes, 1-20 racks, 1-50 devices,
-and at most 16 interfaces per device. Planning performs fixed-endpoint discovery and produces a canonical
+and at most 16 interfaces per device, plus bounded virtual-machine, IP, power,
+circuit, cable, and IPsec-tunnel inventory records. Planning performs
+fixed-endpoint discovery and produces a canonical
 digest without writing. A different approver must approve that exact digest
 before a third executor may create records in dependency order through a
 separate provisioner credential. The gateway records every returned ID and can
@@ -174,6 +182,7 @@ npm run demo:write:verify:software
 npm run demo:write:verify:site
 npm run demo:provision:verify
 npm run demo:provision:verify:governed
+npm run demo:provision:verify:full
 npm run demo:governance:mcp:verify
 npm run demo:governance:postgres:verify
 npm run demo:provision:verify:tenant-boundary
@@ -185,8 +194,10 @@ then restores `matched`. These are recorded metadata values, not claims about
 live routing, electrical state, or actual configuration drift.
 The software-version proof similarly records `12.4.4`, verifies it, and restores
 `12.4.3`; it does not claim to inspect or change software running on a device.
-The provisioning proofs create a disposable five-record customer-site stack,
-verify the recorded NetBox evidence, and remove it. The governed proof also
+The provisioning proofs create a disposable customer-site stack, verify the
+recorded NetBox evidence, and remove it. The full proof additionally covers a
+bounded virtual machine, IP, power, circuit, cable, and IPsec-tunnel inventory
+set. The governed proof also
 validates Keycloak planner/approver/executor separation and digest-bound
 approval.
 

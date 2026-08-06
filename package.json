@@ -25,6 +25,7 @@
     "demo:write:verify:site": "bash demo/netbox-lab/scripts/verify-site-information-write.sh",
     "demo:provision:verify": "bash demo/netbox-lab/scripts/verify-site-provisioning.sh",
     "demo:provision:verify:governed": "bash demo/netbox-lab/scripts/verify-governed-site-provisioning.sh",
+    "demo:provision:verify:full": "bash demo/netbox-lab/scripts/verify-full-environment-provisioning.sh",
     "demo:governance:mcp:verify": "bash demo/netbox-lab/scripts/verify-governance-mcp.sh",
     "demo:governance:postgres:verify": "bash demo/netbox-lab/scripts/verify-postgres-governance.sh",
     "demo:provision:verify:tenant-boundary": "bash demo/netbox-lab/scripts/verify-provisioning-tenant-boundary.sh",

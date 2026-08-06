@@ -9,7 +9,9 @@ development mode, loopback ports, and sanitized seed data; none of those are
 used here.
 
 Follow [the production installation guide](../../docs/install-production-compose.md)
-before starting this stack.
+before starting this stack. That guide separately explains NetBox bootstrap,
+the read-only stdio MCP, and the authenticated governance MCP so operators do
+not mistake the two access paths for one another.
 
 The only public ports are 80 and 443 on Caddy. NetBox, both databases, Valkey,
 and the gateway have no host port mappings. The gateway's `/healthz` and

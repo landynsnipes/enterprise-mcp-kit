@@ -41,8 +41,9 @@ stores its runtime configuration in ignored `.mcp.env` with mode `600`.
 
 - exact device lookup by name and ID through the HTTP adapter;
 - mapping of only the approved `DeviceContext` fields;
-- stdio MCP discovery of the bounded `get_device_context` and
-  `get_site_overview` tools;
+- stdio MCP discovery of all five bounded tools: `get_device_context`,
+  `get_site_overview`, `get_connectivity_path`, `get_rack_context`, and
+  `get_power_path`;
 - a successful end-to-end MCP tool call;
 - safe handling of a missing device; and
 - a write-disabled NetBox credential.
@@ -85,10 +86,10 @@ The deterministic showcase includes at least:
 lookups for all three organizations. Re-running the showcase seed updates its
 owned records without resetting the database.
 
-The current MCP boundary includes exact, read-only device context and a bounded
-site overview. Additional rack, circuit, power, connectivity, and
-impact-analysis tools should be added as separate contracts rather than
-exposing arbitrary NetBox queries.
+The current MCP boundary includes exact, read-only device context, bounded site
+overview, direct connectivity evidence, rack context, and recorded power-path
+evidence. Any future impact-analysis or other capability must be added as its
+own bounded contract rather than exposing arbitrary NetBox queries.
 
 Version fields deliberately separate observed, minimum-approved, compliance,
 source, and observation time. They are sanitized desired-state evidence, not a
