@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -23,6 +25,9 @@
     "demo:write:verify:site": "bash demo/netbox-lab/scripts/verify-site-information-write.sh",
     "demo:provision:verify": "bash demo/netbox-lab/scripts/verify-site-provisioning.sh",
     "demo:provision:verify:governed": "bash demo/netbox-lab/scripts/verify-governed-site-provisioning.sh",
+    "demo:governance:mcp:verify": "bash demo/netbox-lab/scripts/verify-governance-mcp.sh",
+    "demo:governance:postgres:verify": "bash demo/netbox-lab/scripts/verify-postgres-governance.sh",
+    "demo:provision:verify:tenant-boundary": "bash demo/netbox-lab/scripts/verify-provisioning-tenant-boundary.sh",
     "demo:status": "docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml ps",
     "demo:down": "docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml down",
     "demo:seed": "bash demo/netbox-lab/scripts/seed.sh",
@@ -34,10 +39,12 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pg": "8.15.5",
     "typescript": "^5.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
+    "pg": "8.16.3",
     "zod": "4.4.3"
   }
 }

@@ -4,12 +4,16 @@ The engineer workflow accepts one versioned manifest for one tenant and first
 produces a deterministic dry run. The planner is intentionally separate from
 execution and does not expose raw NetBox endpoints or payloads.
 
-Version 1 bounds a request to one site, 1-20 racks, 1-50 devices, and at most
-16 interfaces per device. It validates exact tenant scope, names and slugs,
+Version 1 bounds a request to one site, 0-64 VLANs, 0-64 prefixes, 1-20 racks,
+1-50 devices, and at most 16 interfaces per device. It validates exact tenant scope, names and slugs,
 rack references and elevations, unique device/interface names, device type,
 role and platform references, and IPv4/IPv6 addresses. The result contains a
 canonical SHA-256 manifest digest, resource counts, conflicts, ordered steps,
 and an explicit no-write boundary.
+VLAN IDs must be unique and between 1 and 4094. Prefixes must be unique valid
+IPv4 or IPv6 networks and may reference only a VLAN declared in the same
+manifest. Both resource families use fixed NetBox discovery/create/delete
+endpoints and participate in the same digest and recorded-ID rollback.
 
 The execution engine now binds its input to that digest, re-runs discovery
 immediately before execution, creates through an adapter in dependency order,
@@ -26,6 +30,9 @@ deletes only returned IDs in reverse dependency order.
 `npm run demo:provision:verify:governed` additionally proves Keycloak planner,
 approver, and executor separation, durable digest-bound approval, execution with
 the dedicated credential, and rollback of the recorded creation set.
+`npm run demo:governance:mcp:verify` proves the same lifecycle through the
+authenticated Streamable HTTP MCP, including capability-protected audit
+history and denial of planner execution.
 
 The lab permission is record-type bounded rather than a production tenant
 policy. Production execution additionally requires tenant-scoped NetBox

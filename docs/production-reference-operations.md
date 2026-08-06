@@ -57,29 +57,34 @@ failure, not a reason to broaden the token.
 
 ## Governance and audit boundary
 
-The governance HTTP gateway accepts only verified OIDC access tokens. It may
-create, approve, reject, and retrieve tenant-scoped plans. Its optional first
-executor admits only `netbox.device.metadata.update` for the exact
+The governance gateway accepts only verified OIDC access tokens. Its versioned
+REST routes and stateless Streamable HTTP `/mcp` transport create, approve,
+reject, retrieve, audit, execute, and roll back tenant-scoped plans. The remote
+MCP publishes exactly eight bounded tools; it does not expose arbitrary NetBox
+requests. Its metadata executor admits only `netbox.device.metadata.update` for the exact
 `reconciliation_status` enum or `netbox.device.software-version.update` for
 `observed_software_version` and `minimum_approved_version` on one numeric device
 ID. Version values use a bounded 64-character identifier grammar. It binds approval to the
 captured prior value and `last_updated`, verifies the PATCH response, and can
-restore the recorded prior value. Store
+restore the recorded prior value.
 
-Future broader engineer workflows should accept a versioned customer-site
-manifest rather than arbitrary NetBox requests. The manifest should scope one
-tenant, enumerate intended sites/racks/devices/interfaces/addresses, validate
-references and conflicts, produce an immutable dry-run diff, require approval,
-execute ordered idempotent steps, and retain compensating rollback evidence.
+The implemented customer-site manifest scopes one tenant and bounds sites,
+VLANs, prefixes, racks, devices, interfaces, and addresses. It validates
+references and conflicts, produces an immutable dry-run digest, requires a
+different approver and executor, executes in dependency order, and records
+only returned IDs for compensation and rollback.
 Site-information maintenance should remain a separate capability with an
 explicit allowlist of address and descriptive fields.
 The implemented site path admits `netbox.site.information.update` for one exact
 tenant-owned site and one of `physical_address`, `shipping_address`,
 `description`, `facility`, or `time_zone`. It cannot reassign tenants, change
 status, delete sites, or patch arbitrary fields.
-governance snapshots and audit events on durable, access-controlled storage;
-back up and restore that store together with the operational records required
-for audit retention.
+Production deployments should set `GOVERNANCE_STORAGE_BACKEND=postgres` and
+inject `GOVERNANCE_DATABASE_URL` from a secret store. The PostgreSQL store uses
+a cross-instance advisory transaction lock, durable idempotency receipts, and
+a separate append-only audit table. The application inserts audit events with
+`ON CONFLICT DO NOTHING` and never updates or deletes them. Back up and restore
+this database according to the approved audit-retention policy.
 
 The gate admits only `planner`, `approver`, `executor`, and `auditor` roles and
 maps them to fixed capabilities in application code. Unknown realm roles grant
@@ -90,9 +95,18 @@ identical retry returns the original result and conflicting reuse is denied.
 The initiator and approver cannot execute that same plan. Execution is off by
 default; enabling it requires `GOVERNANCE_EXECUTION_ENABLED=true`, an exact
 NetBox base URL, and a separate write token restricted to `view` and `change`
-on the admitted device set. Production deployments must replace the single-process file store with a
-transactional, access-controlled store that provides cross-instance locking
-and append-only audit retention before enabling execution.
+on the admitted device set. The file backend remains a single-process
+development option only. Set `GOVERNANCE_MCP_ALLOWED_HOSTS` to exact external
+host values and `GOVERNANCE_MCP_REQUESTS_PER_MINUTE` from the approved
+abuse-control policy. Keep `/healthz` and `/metrics` private. Terminate TLS at a
+reviewed reverse proxy, preserve request IDs, and reject plain HTTP at every
+non-loopback ingress.
+
+Use a separate NetBox provisioner account for each tenant boundary. Constrain
+Site, Rack, Device, Interface, IPAddress, VLAN, and Prefix permissions through
+their direct or parent tenant relationship; never share an unconstrained
+add/delete token across tenants. The disposable Northstar lab exercises these
+model-specific constraints.
 
 ## Backup, restore, and rollback
 
@@ -132,3 +146,9 @@ latency and error rate, database capacity, cache health, and audit-store write
 failures. Retain structured logs according to the organization's security and
 audit policy. Exercise an OIDC signing-key rotation, secret rotation, and
 restore drill before production use.
+
+`npm run demo:governance:postgres:verify` creates a temporary isolated database,
+proves concurrent transaction serialization and append-only audit retention,
+and drops only that test database. `npm run demo:governance:mcp:verify` checks
+OIDC role separation, seven-record execution/rollback, audit retrieval,
+readiness, and Prometheus metrics.

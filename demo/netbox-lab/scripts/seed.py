@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from circuits.models import Circuit, CircuitTermination
 from dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, PowerFeed, PowerOutlet, PowerPort, Rack, Site
-from ipam.models import IPAddress
+from ipam.models import IPAddress, Prefix, VLAN
 from tenancy.models import ContactAssignment, Tenant
 from users.models import ObjectPermission, Token
 from vpn.models import Tunnel, TunnelTermination
@@ -137,16 +137,23 @@ provision_reference_permission.object_types.set([
     ContentType.objects.get_for_model(DeviceRole), ContentType.objects.get_for_model(Platform),
 ])
 provision_reference_permission.users.set([provisioner])
-provision_record_permission, _ = ObjectPermission.objects.update_or_create(
-    name="Enterprise MCP Kit bounded customer-site provisioning",
-    defaults={"description": "View, add, and delete only record types admitted by the bounded provisioning adapter", "enabled": True, "actions": ["view", "add", "delete"], "constraints": {}},
-)
-provision_record_permission.object_types.set([
-    ContentType.objects.get_for_model(Site), ContentType.objects.get_for_model(Rack),
-    ContentType.objects.get_for_model(Device), ContentType.objects.get_for_model(Interface),
-    ContentType.objects.get_for_model(IPAddress),
-])
-provision_record_permission.users.set([provisioner])
+for model, constraints in [
+    (Site, {"tenant__slug": "northstar-financial"}),
+    (Rack, {"tenant__slug": "northstar-financial"}),
+    (Device, {"tenant__slug": "northstar-financial"}),
+    (Interface, {"device__tenant__slug": "northstar-financial"}),
+    (IPAddress, {"tenant__slug": "northstar-financial"}),
+    (VLAN, {"tenant__slug": "northstar-financial"}),
+    (Prefix, {"tenant__slug": "northstar-financial"}),
+]:
+    model_name = model._meta.model_name
+    record_permission, _ = ObjectPermission.objects.update_or_create(
+        name=f"Enterprise MCP Kit Northstar provisioning {model_name}",
+        defaults={"description": f"View, add, and delete Northstar {model_name} records admitted by the bounded adapter", "enabled": True, "actions": ["view", "add", "delete"], "constraints": constraints},
+    )
+    record_permission.object_types.set([ContentType.objects.get_for_model(model)])
+    record_permission.users.set([provisioner])
+ObjectPermission.objects.filter(name="Enterprise MCP Kit bounded customer-site provisioning").delete()
 
 Token.objects.filter(user=user, description=TOKEN_DESCRIPTION).delete()
 plaintext = secrets.token_urlsafe(30)
