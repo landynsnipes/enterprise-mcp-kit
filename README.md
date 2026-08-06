@@ -22,6 +22,15 @@ testing and demonstrations without requiring an existing NetBox installation.
 
 See [Run the complete evaluation lab](docs/run-complete-demo.md).
 
+### I want the full self-hosted production reference
+
+Use the private Linux Docker Compose reference for NetBox Community, the
+governed MCP gateway, durable audit storage, and TLS ingress. It is a
+single-host reference deployment with explicit operator responsibilities, not
+the disposable lab.
+
+See [Install the private Docker Compose production reference](docs/install-production-compose.md).
+
 The FOSS component policy, production boundary, plugin admission process, and
 release gates are documented in
 [Enterprise distribution architecture](ENTERPRISE-DISTRIBUTION.md). Component

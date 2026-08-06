@@ -3,12 +3,13 @@ import secrets
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from circuits.models import Circuit, CircuitTermination
-from dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, PowerFeed, PowerOutlet, PowerPort, Rack, Site
+from circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, PowerFeed, PowerOutlet, PowerPanel, PowerPort, Rack, Site
 from ipam.models import IPAddress, Prefix, VLAN
 from tenancy.models import ContactAssignment, Tenant
 from users.models import ObjectPermission, Token
 from vpn.models import Tunnel, TunnelTermination
+from virtualization.models import Cluster, VirtualMachine, VMInterface
 from extras.models import CustomField, CustomFieldChoiceSet, Dashboard
 
 SITE_NAME = "Phoenix Lab"
@@ -135,6 +136,7 @@ provision_reference_permission, _ = ObjectPermission.objects.update_or_create(
 provision_reference_permission.object_types.set([
     ContentType.objects.get_for_model(Tenant), ContentType.objects.get_for_model(DeviceType),
     ContentType.objects.get_for_model(DeviceRole), ContentType.objects.get_for_model(Platform),
+    ContentType.objects.get_for_model(Cluster), ContentType.objects.get_for_model(Provider), ContentType.objects.get_for_model(CircuitType),
 ])
 provision_reference_permission.users.set([provisioner])
 for model, constraints in [
@@ -145,6 +147,13 @@ for model, constraints in [
     (IPAddress, {"tenant__slug": "northstar-financial"}),
     (VLAN, {"tenant__slug": "northstar-financial"}),
     (Prefix, {"tenant__slug": "northstar-financial"}),
+    (VirtualMachine, {"tenant__slug": "northstar-financial"}),
+    (VMInterface, {"virtual_machine__tenant__slug": "northstar-financial"}),
+    (PowerPanel, {"site__tenant__slug": "northstar-financial"}),
+    (PowerFeed, {"tenant__slug": "northstar-financial"}),
+    (Cable, {"tenant__slug": "northstar-financial"}),
+    (Circuit, {"tenant__slug": "northstar-financial"}),
+    (Tunnel, {"tenant__slug": "northstar-financial"}),
 ]:
     model_name = model._meta.model_name
     record_permission, _ = ObjectPermission.objects.update_or_create(
