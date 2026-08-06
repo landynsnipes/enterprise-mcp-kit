@@ -116,6 +116,14 @@ and admitted roles. Execution remains disabled by default and requires an
 explicitly enabled HTTP gateway plus a separate least-privilege NetBox token.
 The unauthenticated stdio MCP surface remains read-only.
 
+The governed gateway also supports a bounded customer-site manifest for one
+tenant: one site, 1-20 racks, 1-50 devices, and at most 16 interfaces per
+device. Planning performs fixed-endpoint discovery and produces a canonical
+digest without writing. A different approver must approve that exact digest
+before a third executor may create records in dependency order through a
+separate provisioner credential. The gateway records every returned ID and can
+roll back only that creation set in reverse dependency order.
+
 The read-only NetBox adapter and stdio MCP server are implemented with mocked
 adapter and protocol tests. Live compatibility is verified against the included
 NetBox Community 4.6.5 evaluation lab using sanitized inventory and a dedicated
@@ -147,6 +155,8 @@ npm run demo:identity:verify
 npm run demo:write:verify
 npm run demo:write:verify:software
 npm run demo:write:verify:site
+npm run demo:provision:verify
+npm run demo:provision:verify:governed
 ```
 
 The bounded-write proof changes the sanitized showcase device from `matched`
@@ -155,6 +165,10 @@ then restores `matched`. These are recorded metadata values, not claims about
 live routing, electrical state, or actual configuration drift.
 The software-version proof similarly records `12.4.4`, verifies it, and restores
 `12.4.3`; it does not claim to inspect or change software running on a device.
+The provisioning proofs create a disposable five-record customer-site stack,
+verify the recorded NetBox evidence, and remove it. The governed proof also
+validates Keycloak planner/approver/executor separation and digest-bound
+approval.
 
 ## References
 
