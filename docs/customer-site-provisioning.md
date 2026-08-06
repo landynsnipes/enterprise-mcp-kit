@@ -5,7 +5,9 @@ produces a deterministic dry run. The planner is intentionally separate from
 execution and does not expose raw NetBox endpoints or payloads.
 
 Version 1 bounds a request to one site, 0-64 VLANs, 0-64 prefixes, 1-20 racks,
-1-50 devices, and at most 16 interfaces per device. It validates exact tenant scope, names and slugs,
+1-50 devices, at most 16 interfaces per device, plus bounded virtual machines,
+IP addresses, power panels and feeds, circuits, cables, and IPsec-tunnel
+inventory. It validates exact tenant scope, names and slugs,
 rack references and elevations, unique device/interface names, device type,
 role and platform references, and IPv4/IPv6 addresses. The result contains a
 canonical SHA-256 manifest digest, resource counts, conflicts, ordered steps,
@@ -40,3 +42,9 @@ permissions, a transactional governance store, rate limits, durable audit
 retention, and operational metrics. Recorded NetBox state is evidence of
 configured inventory only; provisioning does not claim live device or network
 state.
+
+`npm run demo:provision:verify:full` creates and rolls back a 16-record,
+tenant-scoped full-environment manifest. It verifies the returned record IDs
+and compensation order for every created record. This is evidence of NetBox
+inventory provisioning only; it does not provision a real VM, circuit, cable,
+power system, or VPN tunnel.

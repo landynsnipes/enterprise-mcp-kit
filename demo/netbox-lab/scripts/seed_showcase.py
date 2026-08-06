@@ -300,6 +300,7 @@ for cid, circuit_type, tenant, a, z, description in [
 
 cluster_type = save(ClusterType, {"slug": "kubernetes-platform"}, {"name": "Kubernetes Platform", "description": "Sanitized platform cluster"})
 summit_cluster = save(Cluster, {"name": "summit-prod-west"}, {"type": cluster_type, "tenant": summit, "status": "active", "scope_type": ContentType.objects.get_for_model(Site), "scope_id": summit_edge.pk, "description": "Summit production platform"})
+northstar_cluster = save(Cluster, {"name": "northstar-governance-lab"}, {"type": cluster_type, "tenant": northstar, "status": "active", "scope_type": ContentType.objects.get_for_model(Site), "scope_id": phx.pk, "description": "Sanitized Northstar governance verification cluster"})
 for name, address, description in [
     ("summit-control-01", "10.20.10.31/24", "Platform control plane"),
     ("summit-worker-01", "10.20.10.41/24", "Platform worker"),

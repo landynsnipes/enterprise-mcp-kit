@@ -1,0 +1,209 @@
+name: enterprise-mcp-kit-production
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  security_opt: [no-new-privileges:true]
+
+services:
+  netbox-db:
+    <<: *service-defaults
+    image: docker.io/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+    environment:
+      POSTGRES_DB: ${NETBOX_DB_NAME}
+      POSTGRES_USER: ${NETBOX_DB_USER}
+      POSTGRES_PASSWORD: ${NETBOX_DB_PASSWORD}
+    volumes: ["netbox-db:/var/lib/postgresql"]
+    networks: [netbox-backend]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -q -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 2g
+    cpus: 2.0
+
+  netbox-redis:
+    <<: *service-defaults
+    image: docker.io/valkey/valkey@sha256:ee91f7a174ac4d6a6b0685b3a60e321f0a9dbbb691f9b0e285be2ba1d1be8328
+    command:
+      - sh
+      - -c
+      - 'valkey-server --appendonly yes --requirepass "$${NETBOX_REDIS_PASSWORD}"'
+    environment:
+      NETBOX_REDIS_PASSWORD: "${NETBOX_REDIS_PASSWORD}"
+    volumes: ["netbox-redis:/data"]
+    networks: [netbox-backend]
+    healthcheck:
+      test: [CMD-SHELL, "valkey-cli --no-auth-warning -a $$NETBOX_REDIS_PASSWORD ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    mem_limit: 512m
+    cpus: 0.5
+
+  netbox-cache:
+    <<: *service-defaults
+    image: docker.io/valkey/valkey@sha256:ee91f7a174ac4d6a6b0685b3a60e321f0a9dbbb691f9b0e285be2ba1d1be8328
+    command:
+      - sh
+      - -c
+      - 'valkey-server --requirepass "$${NETBOX_CACHE_PASSWORD}"'
+    environment:
+      NETBOX_CACHE_PASSWORD: "${NETBOX_CACHE_PASSWORD}"
+    volumes: ["netbox-cache:/data"]
+    networks: [netbox-backend]
+    healthcheck:
+      test: [CMD-SHELL, "valkey-cli --no-auth-warning -a $$NETBOX_CACHE_PASSWORD ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    mem_limit: 512m
+    cpus: 0.5
+
+  netbox:
+    <<: *service-defaults
+    image: docker.io/netboxcommunity/netbox@sha256:691ec1a4f569f3dfb9fefd9f086cca1b39689ad59c3eae753712a741447e5e60
+    environment:
+      DB_HOST: netbox-db
+      DB_PORT: "5432"
+      DB_NAME: ${NETBOX_DB_NAME}
+      DB_USER: ${NETBOX_DB_USER}
+      DB_PASSWORD: ${NETBOX_DB_PASSWORD}
+      REDIS_HOST: netbox-redis
+      REDIS_PASSWORD: ${NETBOX_REDIS_PASSWORD}
+      REDIS_CACHE_HOST: netbox-cache
+      REDIS_CACHE_PASSWORD: ${NETBOX_CACHE_PASSWORD}
+      SECRET_KEY: ${NETBOX_SECRET_KEY}
+      SUPERUSER_NAME: ${NETBOX_SUPERUSER_NAME}
+      SUPERUSER_EMAIL: ${NETBOX_SUPERUSER_EMAIL}
+      SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD}
+      ALLOWED_HOST: ${NETBOX_PUBLIC_HOST}
+    depends_on:
+      netbox-db: { condition: service_healthy }
+      netbox-redis: { condition: service_healthy }
+      netbox-cache: { condition: service_healthy }
+    volumes:
+      - netbox-media:/opt/netbox/netbox/media
+      - netbox-reports:/opt/netbox/netbox/reports
+      - netbox-scripts:/opt/netbox/netbox/scripts
+    networks: [edge, netbox-backend]
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://localhost:8080/login/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+    mem_limit: 2g
+    cpus: 2.0
+
+  netbox-worker:
+    <<: *service-defaults
+    image: docker.io/netboxcommunity/netbox@sha256:691ec1a4f569f3dfb9fefd9f086cca1b39689ad59c3eae753712a741447e5e60
+    command: [/opt/netbox/venv/bin/python, /opt/netbox/netbox/manage.py, rqworker]
+    environment:
+      DB_HOST: netbox-db
+      DB_PORT: "5432"
+      DB_NAME: ${NETBOX_DB_NAME}
+      DB_USER: ${NETBOX_DB_USER}
+      DB_PASSWORD: ${NETBOX_DB_PASSWORD}
+      REDIS_HOST: netbox-redis
+      REDIS_PASSWORD: ${NETBOX_REDIS_PASSWORD}
+      REDIS_CACHE_HOST: netbox-cache
+      REDIS_CACHE_PASSWORD: ${NETBOX_CACHE_PASSWORD}
+      SECRET_KEY: ${NETBOX_SECRET_KEY}
+    depends_on: { netbox: { condition: service_healthy } }
+    volumes:
+      - netbox-media:/opt/netbox/netbox/media
+      - netbox-reports:/opt/netbox/netbox/reports
+      - netbox-scripts:/opt/netbox/netbox/scripts
+    networks: [netbox-backend]
+    healthcheck:
+      test: [CMD-SHELL, "ps -aux | grep -v grep | grep -q rqworker"]
+      interval: 15s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    mem_limit: 1g
+    cpus: 1.0
+
+  governance-db:
+    <<: *service-defaults
+    image: docker.io/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+    environment:
+      POSTGRES_DB: governance
+      POSTGRES_USER: governance
+      POSTGRES_PASSWORD: ${GOVERNANCE_DB_PASSWORD}
+    volumes: ["governance-db:/var/lib/postgresql"]
+    networks: [governance]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -q -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 1g
+    cpus: 1.0
+
+  governance:
+    <<: *service-defaults
+    image: ${GOVERNANCE_IMAGE:-enterprise-mcp-kit-governance:local}
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      GOVERNANCE_OIDC_ISSUER: ${GOVERNANCE_OIDC_ISSUER}
+      GOVERNANCE_OIDC_JWKS_URL: ${GOVERNANCE_OIDC_JWKS_URL}
+      GOVERNANCE_OIDC_AUDIENCE: ${GOVERNANCE_OIDC_AUDIENCE}
+      GOVERNANCE_STORAGE_BACKEND: postgres
+      GOVERNANCE_DATABASE_URL: postgresql://governance:${GOVERNANCE_DB_PASSWORD}@governance-db:5432/governance
+      GOVERNANCE_HTTP_HOST: 0.0.0.0
+      GOVERNANCE_HTTP_PORT: "8787"
+      GOVERNANCE_MCP_ALLOWED_HOSTS: ${GOVERNANCE_MCP_ALLOWED_HOSTS}
+      GOVERNANCE_MCP_REQUESTS_PER_MINUTE: ${GOVERNANCE_MCP_REQUESTS_PER_MINUTE:-60}
+      GOVERNANCE_EXECUTION_ENABLED: ${GOVERNANCE_EXECUTION_ENABLED:-false}
+      GOVERNANCE_PROVISIONING_ENABLED: ${GOVERNANCE_PROVISIONING_ENABLED:-false}
+      NETBOX_WRITE_BASE_URL: ${NETBOX_WRITE_BASE_URL:-}
+      NETBOX_WRITE_TOKEN: ${NETBOX_WRITE_TOKEN:-}
+      NETBOX_PROVISION_BASE_URL: ${NETBOX_PROVISION_BASE_URL:-}
+      NETBOX_PROVISION_TOKEN: ${NETBOX_PROVISION_TOKEN:-}
+      NETBOX_PROVISION_TIMEOUT_MS: ${NETBOX_PROVISION_TIMEOUT_MS:-5000}
+    depends_on: { governance-db: { condition: service_healthy }, netbox: { condition: service_healthy } }
+    networks: [edge, governance]
+    mem_limit: 512m
+    cpus: 0.5
+
+  caddy:
+    <<: *service-defaults
+    image: docker.io/library/caddy@sha256:b95ed06fbc6d74d24a40902090c8cc6086ce7d08ba60a3a7e8e62bf164a9d7bb
+    environment:
+      NETBOX_PUBLIC_HOST: ${NETBOX_PUBLIC_HOST}
+      MCP_PUBLIC_HOST: ${MCP_PUBLIC_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports: ["80:80", "443:443"]
+    networks: [edge]
+    healthcheck:
+      test: [CMD, caddy, version]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 256m
+    cpus: 0.25
+
+networks:
+  edge: {}
+  netbox-backend: { internal: true }
+  governance: { internal: true }
+
+volumes:
+  netbox-db: {}
+  netbox-redis: {}
+  netbox-cache: {}
+  netbox-media: {}
+  netbox-reports: {}
+  netbox-scripts: {}
+  governance-db: {}
+  caddy-data: {}
+  caddy-config: {}
