@@ -35,12 +35,16 @@ The delivery pipeline is intentionally staged:
 1. validation, tests, and OpenTofu plan run without cluster mutation;
 2. `deploy-local-k3s` is a manual LAS deployment;
 3. `promote-local-k3s-chi` is a second manual gate and cannot run before LAS;
-4. site-specific rollback jobs use Kubernetes' recorded prior Deployment
+4. `verify-site-service-loss` is a third manual gate that scales LAS to zero,
+   verifies CHI remains ready, restores LAS even when a check fails, and emits
+   checksum-bearing F2 evidence; and
+5. site-specific rollback jobs use Kubernetes' recorded prior Deployment
    revision and emit checksum-bearing evidence artifacts.
 
 LAS and CHI are separate logical namespaces on the same single-node K3s/WSL
 host. This demonstrates controlled promotion and rollback, not independent-site
-HA or disaster recovery.
+HA or disaster recovery. The F2 proof is distinct from the ten-minute
+site-connectivity partition required by architecture-contract test AT-12.
 
 Review GitLab at <http://localhost:8929/>. The username is `root`; retrieve the
 local password without printing it into CI logs by reading

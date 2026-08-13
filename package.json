@@ -42,6 +42,7 @@
     "gitlab:up": "npm run gitlab:config && docker compose --project-name enterprise-aiops-gitlab --env-file demo/gitlab/.env -f demo/gitlab/compose.yaml up -d",
     "gitlab:status": "docker compose --project-name enterprise-aiops-gitlab --env-file demo/gitlab/.env -f demo/gitlab/compose.yaml ps",
     "gitlab:k3s:access": "bash demo/gitlab/scripts/configure-k3s-access.sh",
+    "gitlab:k3s:verify-site-loss": "bash demo/gitlab/scripts/verify-site-service-loss.sh",
     "gitlab:down": "docker compose --project-name enterprise-aiops-gitlab --env-file demo/gitlab/.env -f demo/gitlab/compose.yaml down",
     "tofu:validate": "docker run --rm -v $PWD:/workspace -w /workspace ghcr.io/opentofu/opentofu@sha256:1cdf44e7a44a67c7838ada83c71ad28b4c4e1571b47ad1c5b592624c2c8f35b5 -chdir=infra/opentofu/local-lab init -backend=false && docker run --rm -v $PWD:/workspace -w /workspace ghcr.io/opentofu/opentofu@sha256:1cdf44e7a44a67c7838ada83c71ad28b4c4e1571b47ad1c5b592624c2c8f35b5 -chdir=infra/opentofu/local-lab validate",
     "tofu:plan": "docker run --rm -v $PWD:/workspace -w /workspace ghcr.io/opentofu/opentofu@sha256:1cdf44e7a44a67c7838ada83c71ad28b4c4e1571b47ad1c5b592624c2c8f35b5 -chdir=infra/opentofu/local-lab plan",

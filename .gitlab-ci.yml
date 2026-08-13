@@ -1,4 +1,4 @@
-stages: [validate, test, plan, deploy_las, promote_chi, rollback]
+stages: [validate, test, plan, deploy_las, promote_chi, degraded_test, rollback]
 
 default:
   interruptible: true
@@ -42,6 +42,15 @@ promote-local-k3s-chi:
   when: manual
   allow_failure: false
   artifacts: { paths: [delivery-evidence/chi/], expire_in: 30 days }
+
+verify-site-service-loss:
+  stage: degraded_test
+  needs: [deploy-local-k3s, promote-local-k3s-chi]
+  script: ["bash demo/gitlab/scripts/verify-site-service-loss.sh"]
+  environment: { name: local/two-site-proof }
+  when: manual
+  allow_failure: false
+  artifacts: { paths: [delivery-evidence/degraded-operation/], expire_in: 30 days }
 
 rollback-local-k3s-las:
   stage: rollback
