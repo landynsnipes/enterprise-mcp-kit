@@ -21,8 +21,15 @@ wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wiregua
 wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/partition.sh down
 wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/partition.sh up
 wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/verify-recovery.sh
+wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/verify-degraded-window.sh
 wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/down.sh
 ```
+
+`verify-degraded-window.sh` is the ten-minute AT-12 proof. It samples both
+sites' local workload-to-router paths, the failed cross-site path, the denied
+east-west path, and observer telemetry throughout the partition. A trap always
+restores connectivity. The output and SHA-256 checksum are written under the
+ignored `delivery-evidence/wireguard/` directory.
 
 The namespace names and interface names are fixed. Setup deletes only those
 five exact namespaces before rebuilding them. It never deletes keys, Docker

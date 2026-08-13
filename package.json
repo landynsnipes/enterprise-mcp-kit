@@ -24,6 +24,7 @@
     "aiops:wireguard:sim:down": "docker compose -f demo/wireguard-two-site/compose.yaml down --remove-orphans",
     "aiops:wireguard:netns:setup": "sh demo/wireguard-netns/setup.sh",
     "aiops:wireguard:netns:verify": "sh demo/wireguard-netns/verify.sh",
+    "aiops:wireguard:netns:verify:degraded": "sudo sh demo/wireguard-netns/verify-degraded-window.sh",
     "aiops:wireguard:netns:down": "sh demo/wireguard-netns/down.sh",
     "aiops:wireguard:observe": "node demo/wireguard-netns/observer.mjs",
     "mcp:stdio": "npm run build && node dist/src/server.js",
