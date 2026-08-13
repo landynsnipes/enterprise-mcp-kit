@@ -1,0 +1,19 @@
+[Unit]
+Description=Open Enterprise AIOps WireGuard observability endpoint
+After=aiops-wireguard-netns.service
+Requires=aiops-wireguard-netns.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /home/landynsnipes/enterprise-mcp-kit/demo/wireguard-netns/observer.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_NET_ADMIN CAP_NET_RAW
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

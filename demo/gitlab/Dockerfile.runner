@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1.7
+FROM docker.io/library/node@sha256:7aa86fa052f6e4b101557ccb56717cb4311be1334381f526fe013418fe157384 AS node
+FROM docker.io/gitlab/gitlab-runner@sha256:a6573f496d41ca633fd2fedb3348dafc8f386db00bd8c42a3d358410ad21bf84
+USER root
+COPY --from=node /usr/local/ /usr/local/
+COPY --from=node /usr/lib/libstdc++.so.6* /usr/lib/
+COPY --from=node /usr/lib/libgcc_s.so.1 /usr/lib/
+ADD --checksum=sha256:1fc9af962e3632b7cd0ba27076cd9f1ced177567defe9e331ac37f5a40468575 https://github.com/opentofu/opentofu/releases/download/v1.12.1/tofu_1.12.1_linux_amd64.zip /tmp/tofu.zip
+RUN unzip /tmp/tofu.zip -d /usr/local/bin tofu \
+    && rm /tmp/tofu.zip \
+    && node --version \
+    && npm --version \
+    && tofu version

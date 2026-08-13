@@ -1,0 +1,4 @@
+.env
+.env.tmp.*
+.nats.generated.conf
+.nats.generated.conf.tmp

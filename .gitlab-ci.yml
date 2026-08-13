@@ -1,0 +1,31 @@
+stages: [validate, test, plan, deploy]
+
+default:
+  interruptible: true
+  retry: { max: 1, when: [runner_system_failure] }
+
+validate-distribution:
+  stage: validate
+  image: docker.io/library/node@sha256:e71b848e62e2c32bf5572b327b032a0da79b6a390bc924cdb827249c81e13a88
+  script: ["npm ci", "npm run typecheck", "npm run validate:distribution", "git diff --check"]
+
+test-contracts:
+  stage: test
+  image: docker.io/library/node@sha256:e71b848e62e2c32bf5572b327b032a0da79b6a390bc924cdb827249c81e13a88
+  script: ["npm ci", "npm test"]
+
+plan-local-sites:
+  stage: plan
+  image: ghcr.io/opentofu/opentofu@sha256:1cdf44e7a44a67c7838ada83c71ad28b4c4e1571b47ad1c5b592624c2c8f35b5
+  script:
+    - tofu -chdir=infra/opentofu/local-lab init -backend=false
+    - tofu -chdir=infra/opentofu/local-lab validate
+    - tofu -chdir=infra/opentofu/local-lab plan -out=../../../local-sites.tfplan
+  artifacts: { paths: [local-sites.tfplan], expire_in: 1 day }
+
+deploy-local-k3s:
+  stage: deploy
+  image: docker.io/library/alpine@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1
+  script: ["echo 'Deployment remains operator-owned; use the reviewed manifest and bounded local deploy command.'"]
+  when: manual
+  allow_failure: false

@@ -45,6 +45,14 @@ release gates are documented in
 licenses and candidate status are recorded in
 [Third-party component policy and notices](THIRD_PARTY_LICENSES.md).
 
+The longer-term portfolio direction is an open, two-site enterprise AIOps
+platform that combines NetBox, Proxmox, Kubernetes, Ansible, Zabbix,
+Prometheus, Grafana, and governed AI-assisted operations. Its phased scope,
+evidence requirements, and safety boundaries are documented in the
+[Open Enterprise AIOps Platform roadmap](docs/open-enterprise-aiops-roadmap.md).
+The roadmap's Phase 0 decisions and measurable gates are captured in the
+[two-site architecture contract](docs/two-site-architecture-contract.md).
+
 > The included NetBox environment is an evaluation and reference deployment,
 > not a turnkey production NetBox distribution. Production operators remain
 > responsible for identity, TLS, backups, upgrades, availability, and

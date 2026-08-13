@@ -1,0 +1,19 @@
+[Unit]
+Description=Open Enterprise AIOps cloud-reference localhost review endpoint
+After=network-online.target k3s.service
+Requires=k3s.service
+
+[Service]
+Type=simple
+User=veltrax
+Group=veltrax
+ExecStart=/usr/local/bin/k3s kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml -n cloud-reference port-forward --address 127.0.0.1 service/cloud-reference 8082:80
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

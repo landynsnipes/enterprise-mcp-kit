@@ -1,0 +1,18 @@
+[Unit]
+Description=Open Enterprise AIOps Zabbix availability monitoring
+Requires=docker.service
+Wants=aiops-wireguard-observer.service
+After=docker.service aiops-wireguard-observer.service network-online.target
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/landynsnipes/enterprise-mcp-kit/demo/zabbix
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStartPost=/usr/bin/bash -c 'for i in {1..90}; do /usr/bin/curl -fsS http://127.0.0.1:8080/ping >/dev/null && exit 0; sleep 2; done; exit 1'
+ExecStartPost=/usr/bin/bash -c 'set -a; source ./.env; set +a; /usr/bin/node ./bootstrap.mjs'
+ExecReload=/usr/bin/bash -c 'set -a; source ./.env; set +a; /usr/bin/node ./bootstrap.mjs'
+ExecStop=/usr/bin/docker compose stop
+TimeoutStartSec=300
+TimeoutStopSec=90
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,66 @@
+name: enterprise-aiops-zabbix
+services:
+  postgres:
+    # PostgreSQL 18.4, reused from the validated NetBox lab manifest.
+    image: docker.io/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: ['postgres', '-c', 'listen_addresses=127.0.0.1', '-c', 'max_connections=100']
+    network_mode: host
+    volumes: [zabbix-postgres:/var/lib/postgresql]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -q -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  server:
+    # Zabbix 7.4.7 server with PostgreSQL, pinned to the official manifest.
+    image: docker.io/zabbix/zabbix-server-pgsql@sha256:3c3c9b1a5c93442644346bfdd8cf854a491cc5a92fcfaa905a2d749b0cecbcc0
+    env_file: .env
+    environment:
+      DB_SERVER_HOST: 127.0.0.1
+      DB_SERVER_PORT: '5432'
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ZBX_LISTENIP: 127.0.0.1
+      ZBX_STARTPOLLERS: '2'
+      ZBX_STARTHTTPPOLLERS: '2'
+      ZBX_CACHESIZE: 32M
+      ZBX_HISTORYCACHESIZE: 16M
+      ZBX_TRENDCACHESIZE: 4M
+    network_mode: host
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+  web:
+    # Zabbix 7.4.7 Nginx frontend, pinned to the official manifest.
+    image: docker.io/zabbix/zabbix-web-nginx-pgsql@sha256:ceeeb7555d1747bec0c392a32d6d78ae805397750a4b078f8b525e1fe72effbc
+    env_file: .env
+    environment:
+      DB_SERVER_HOST: 127.0.0.1
+      DB_SERVER_PORT: '5432'
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ZBX_SERVER_HOST: 127.0.0.1
+      ZBX_SERVER_PORT: '10051'
+      ZBX_SERVER_NAME: Open Enterprise AIOps Availability
+      PHP_TZ: America/Los_Angeles
+    network_mode: host
+    depends_on:
+      postgres: { condition: service_healthy }
+      server: { condition: service_started }
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:8080/ping']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+volumes:
+  zabbix-postgres: {}

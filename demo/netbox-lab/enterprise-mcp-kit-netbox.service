@@ -1,0 +1,17 @@
+[Unit]
+Description=Enterprise MCP Kit NetBox evaluation lab
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/landynsnipes/enterprise-mcp-kit
+ExecStart=/usr/bin/docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml up -d
+ExecStop=/usr/bin/docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml stop
+TimeoutStartSec=180
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

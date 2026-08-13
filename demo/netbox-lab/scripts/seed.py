@@ -59,6 +59,23 @@ reconciliation_field, _ = CustomField.objects.update_or_create(
 )
 reconciliation_field.object_types.set([ContentType.objects.get_for_model(Device)])
 
+# WireGuard is not a native NetBox tunnel encapsulation. Record only bounded,
+# secret-free intended state on the virtual interface; runtime state belongs to
+# WireGuard/telemetry and key material is always supplied out of band.
+for field_name, label, field_type, description in [
+    ("wireguard_peer_site", "WireGuard peer site", "text", "Sanitized intended remote site slug; not live peer state"),
+    ("wireguard_peer_device", "WireGuard peer device", "text", "Sanitized intended remote device name"),
+    ("wireguard_peer_interface", "WireGuard peer interface", "text", "Sanitized intended remote interface name"),
+    ("wireguard_allowed_prefixes", "WireGuard allowed prefixes", "json", "Bounded intended routed prefixes"),
+    ("wireguard_listen_port", "WireGuard listen port", "integer", "Intended UDP listen port"),
+    ("wireguard_peer_public_key_fingerprint", "WireGuard peer public key fingerprint", "text", "Expected peer SHA-256 fingerprint only; never key material"),
+]:
+    field, _ = CustomField.objects.update_or_create(
+        name=field_name,
+        defaults={"label": label, "type": field_type, "description": description, "required": False, "weight": 120},
+    )
+    field.object_types.set([ContentType.objects.get_for_model(Interface)])
+
 User = get_user_model()
 user, _ = User.objects.get_or_create(username=USERNAME)
 user.is_active = True
