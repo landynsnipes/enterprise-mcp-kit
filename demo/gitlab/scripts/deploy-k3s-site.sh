@@ -24,6 +24,7 @@ if [[ "$action" == deploy ]]; then
   rendered="$(mktemp)"
   trap 'rm -f "$rendered"' EXIT
   sed -e "s/__REVISION__/$revision/g" -e "s/__PIPELINE__/$pipeline/g" "$source_manifest" >"$rendered"
+  kubectl apply --dry-run=server -f "$rendered" >/dev/null
   kubectl apply -f "$rendered"
 else
   [[ -n "$before_revision" && "$before_revision" != 1 ]] || { echo 'No prior Kubernetes revision is available for rollback.' >&2; exit 1; }
