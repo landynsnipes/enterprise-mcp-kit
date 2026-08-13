@@ -33,7 +33,20 @@ export class AnsibleObserverExecutor implements ObserverExecutor{
   async restart(){await run('/usr/bin/ansible-playbook',['--inventory','localhost,','--connection','local',this.playbook],{timeout:60_000,maxBuffer:256*1024});}
   async healthy(){try{const response=await fetch('http://127.0.0.1:9108/health',{signal:AbortSignal.timeout(5_000)});return response.ok&&(await response.json() as {healthy?:unknown}).healthy===true;}catch{return false;}}
 }
-function validateInput(input:{expiresAt:string;confidence:number;promptVersion:string|null;evidence:IncidentEvidence[]},now:Date){const expiry=Date.parse(input?.expiresAt);if(!Number.isFinite(expiry)||expiry<=now.getTime()||expiry>now.getTime()+15*60_000||!Number.isFinite(input.confidence)||input.confidence<0||input.confidence>1||!Array.isArray(input.evidence)||input.evidence.length<2||input.evidence.length>8||!input.evidence.some(item=>item.healthy===false))throw new GovernanceValidationError('Incident recommendation metadata is invalid, stale, or lacks degraded evidence.');for(const evidence of input.evidence){if(!['prometheus','zabbix','observer','systemd'].includes(evidence.source)||!Number.isFinite(Date.parse(evidence.observedAt))||evidence.decisionTraceId!=='dtr_wireguard_netns_v1'||typeof evidence.healthy!=='boolean')throw new GovernanceValidationError('Incident evidence is invalid or outside the admitted decision trace.');exact(evidence.summary);}if(input.promptVersion!==null)exact(input.promptVersion);}
+function validateInput(input:{expiresAt:string;confidence:number;promptVersion:string|null;evidence:IncidentEvidence[]},now:Date){
+  assertExactKeys(input,['expiresAt','confidence','promptVersion','evidence'],'Incident recommendation');
+  const nowMs=now.getTime();
+  const expiry=Date.parse(input?.expiresAt);
+  if(!Number.isFinite(expiry)||expiry<=nowMs||expiry>nowMs+15*60_000||!Number.isFinite(input.confidence)||input.confidence<0||input.confidence>1||!Array.isArray(input.evidence)||input.evidence.length<2||input.evidence.length>8||!input.evidence.some(item=>item.healthy===false))throw new GovernanceValidationError('Incident recommendation metadata is invalid, stale, or lacks degraded evidence.');
+  for(const evidence of input.evidence){
+    assertExactKeys(evidence,['source','observedAt','healthy','summary','decisionTraceId'],'Incident evidence');
+    const observedAt=Date.parse(evidence.observedAt);
+    if(!['prometheus','zabbix','observer','systemd'].includes(evidence.source)||!Number.isFinite(observedAt)||observedAt<nowMs-2*60_000||observedAt>nowMs+5_000||evidence.decisionTraceId!=='dtr_wireguard_netns_v1'||typeof evidence.healthy!=='boolean')throw new GovernanceValidationError('Incident evidence is invalid, stale, future-dated, or outside the admitted decision trace.');
+    exact(evidence.summary);
+  }
+  if(input.promptVersion!==null)exact(input.promptVersion);
+}
+function assertExactKeys(value:unknown,allowed:string[],label:string){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length!==allowed.length||Object.keys(value).some(key=>!allowed.includes(key)))throw new GovernanceValidationError(`${label} contains missing or unknown fields.`);}
 function sameTenant(actor:GovernanceActor,plan:IncidentPlan){if(actor.tenantId!==plan.tenantId)throw new GovernanceAuthorizationError('Incident plan is outside the actor tenant scope.');}
 function exact(value:string){if(typeof value!=='string'||!value||value.trim()!==value||value.length>500)throw new GovernanceValidationError('Incident text must be exact and bounded.');}
 function record(plan:IncidentPlan,event:string,actor:GovernanceActor,detail:string){plan.audit.push({event,actorId:actor.subjectId,occurredAt:new Date().toISOString(),detail});}

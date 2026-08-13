@@ -14,6 +14,27 @@ users. The core accepts only a trusted `GovernanceActor`; transport-level OIDC
 verification remains the responsibility of the existing authenticated
 governance gateway. The proof script itself does not handle passwords or tokens.
 
+## Deterministic governance evaluation
+
+Run the complete non-mutating governance matrix with one command:
+
+```bash
+npm run aiops:incident:evaluate
+```
+
+The command proves strict unknown-field rejection, evidence freshness, tenant
+scope, separation of duties, exact-digest integrity, healthy-evidence refusal,
+replay prevention, bounded verification, recorded-state rollback, and
+fail-closed handling of unsuccessful verification. It writes a private,
+ignored, checksum-bearing evidence bundle to
+`.runtime/latest-evaluation.json`.
+
+This evaluation uses a deterministic fake bounded executor. It does not claim
+that OIDC, Ansible, systemd, Prometheus, or Zabbix were exercised. Use the split
+OIDC flow below for live evidence. The split is intentional: a one-command test
+cannot truthfully demonstrate independent human review because it would approve
+its own generated plan.
+
 Run after `npm run build`:
 
 ```bash

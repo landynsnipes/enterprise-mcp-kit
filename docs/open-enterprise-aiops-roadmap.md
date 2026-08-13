@@ -62,7 +62,7 @@ The portfolio may describe this as **AI-assisted operations** or **governed AIOp
 
 ## Delivery phases
 
-### Phase 0 - Architecture contract
+### Phase 0 - Architecture contract (accepted; evidence refreshed 2026-08-13)
 
 The proposed Phase 0 decisions, topology, ownership boundaries, failure
 scenarios, acceptance tests, and capacity evidence are in the
@@ -150,13 +150,21 @@ The public story should make the evidence easy to evaluate:
 
 ## Immediate next milestone
 
-Create the **two-site architecture contract** before provisioning new infrastructure. It should choose the lab constraints and produce:
+Close the **flagship governed-incident evidence slice** without widening the
+action surface:
 
-1. Las Vegas and Chicago topology and trust-zone diagrams.
-2. A component/version/licensing matrix.
-3. A source-of-truth ownership matrix covering NetBox, Proxmox, Kubernetes, Zabbix, Prometheus, Grafana, and Ansible.
-4. Three failure scenarios: loss of a workload, loss of a site service, and loss of site connectivity.
-5. Acceptance tests for rebuild, observability, approval, execution, verification, and rollback.
-6. A hardware/capacity check that determines whether both sites can be simulated on the current equipment without false HA claims.
+1. Run `npm run aiops:incident:evaluate` to produce the checksum-bearing
+   deterministic positive/negative governance matrix.
+2. Run the split OIDC preparation and approval/execution commands so a human
+   reviews the exact live plan and digest before the fixed Ansible action.
+3. Correlate the live Prometheus, Zabbix, Grafana, systemd, approval, execution,
+   verification, and rollback-state artifacts under one decision trace.
+4. Capture failed verification, replay, stale evidence, unknown-field,
+   self-approval, cross-tenant, and modified-digest rejection evidence.
+5. Publish an implemented/simulated/planned evidence index only after sanitizing
+   identifiers and confirming that no tokens or private runtime artifacts are
+   present.
 
-Only after that contract is reviewed should implementation begin with the smallest two-site foundation slice.
+After this slice, prioritize clean NetBox/governance PostgreSQL restore evidence
+and GitLab-controlled K3s promotion from LAS to CHI. Proxmox remains a documented
+interface until a suitable non-WSL host exists.

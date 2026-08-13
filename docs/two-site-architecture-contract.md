@@ -1,8 +1,8 @@
 # Two-Site Open Enterprise AIOps Architecture Contract
 
-Status: proposed Phase 0 contract; no platform components are installed by this document.
-Evidence date: 2026-08-11.
-Review gate: implementation starts only after this contract and its unresolved decisions are reviewed.
+Status: accepted logical Phase 0 contract with an incrementally implemented WSL evaluation lab.
+Evidence refreshed: 2026-08-13.
+Review gate: each new capability must retain the claims boundary, pass its acceptance evidence, and remain separately reviewable before portfolio publication.
 
 ## 1. Purpose and claims boundary
 
@@ -24,7 +24,7 @@ The published lab uses sanitized fictional identifiers, RFC 1918 addressing, doc
 
 Evidence was gathered from the working tree, source, tests, package manifest, distribution inventory, and existing documentation. A listed test or script is repository evidence, not a claim that it was executed successfully during this architecture-only phase.
 
-| Capability | State on 2026-08-11 | Repository evidence | Phase 0 interpretation |
+| Capability | State on 2026-08-13 | Repository evidence | Phase 0 interpretation |
 | --- | --- | --- | --- |
 | Five bounded NetBox context tools | Implemented and tested with mocks; live lab verification scripts exist | `src/mcp-server.ts`, `src/netbox-client.ts`, `test/mcp-server.test.ts`, `test/netbox-client.test.ts` | Reuse; NetBox evidence remains bounded and non-runtime |
 | Exact device, site, connectivity, rack, and recorded power context | Implemented | README adapter contract and NetBox client tests | Direct connectivity evidence is not a live forwarding-path claim |
@@ -34,9 +34,14 @@ Evidence was gathered from the working tree, source, tests, package manifest, di
 | Durable PostgreSQL audit/governance storage | Implemented with tests and live verification script | `src/governance-postgres-storage.ts`, durability tests | Candidate system of record for decisions and outcomes |
 | Bounded NetBox metadata writes and site provisioning | Implemented, disabled by default, with verification/rollback proofs | writer/executor source and tests; `demo:*:verify` scripts | These are inventory changes, not runtime remediation |
 | Health, metrics, rate limits, host protection, OIDC | Implemented for governance HTTP gateway | gateway/config/observability source and tests | Extend telemetry with trace IDs and readiness dependencies |
-| LAS/CHI Proxmox, Kubernetes, Ansible, Zabbix, Prometheus, Grafana platform | Planned; no implementation evidence found | roadmap only | Do not describe as deployed or integrated |
-| AI retrieval/recommendation pipeline and incident evaluation suite | Planned | roadmap only | Must be built behind strict contracts and approval |
-| Site connectivity, backup restore, degraded operation | Planned | roadmap only | Must be proved with repeatable tests before claims |
+| Proxmox virtualization | Planned and unavailable in the current WSL-only host | architecture decision matrix and capacity checklist | Preserve the VM contract; do not claim Proxmox lifecycle evidence |
+| Kubernetes workload platform | Implemented as one local K3s evaluation cluster with a two-replica cloud-reference workload | `demo/k3s`, `k8s/cloud-reference`, K3s npm scripts | Proves local cloud-native deployment, not two independent clusters or physical HA |
+| Ansible bounded execution | Implemented for the fixed WireGuard observer restart and WireGuard router configuration | `ansible/incidents`, `ansible/wireguard`, executor and tests | No generic playbook or shell surface is exposed to the recommender |
+| Zabbix, Prometheus, and Grafana observability | Implemented as local evaluation services with provisioned rules and dashboards | `demo/zabbix`, `demo/observability`, Grafana provisioning and verification scripts | Proves local operational views; retention and independent-site operation remain unproved |
+| LAS/CHI site connectivity | Implemented as Docker and native network-namespace simulations with WireGuard intent linked to NetBox | `demo/wireguard-two-site`, `demo/wireguard-netns`, NetBox WireGuard schema/tests | Proves logical routing, allowlists, partition and recovery behavior; not physical-site connectivity |
+| Governed incident recommendation and evaluation | Implemented for one fixed observer-restart action with strict input, freshness, digest, tenant, approval, replay, verification and rollback-state controls | `src/aiops-incident.ts`, `scripts/evaluate-governed-incident.mjs`, split OIDC CLI, tests | The deterministic evaluation uses a fake executor; the split live flow proves OIDC/Ansible/systemd/Prometheus evidence. No production LLM is called |
+| Backup restore and clean rebuild | Partially implemented | NetBox recovery and upgrade rollback scripts; systemd/Compose startup scripts | A clean NetBox/governance PostgreSQL restore evidence bundle and full empty-state rebuild timing remain required |
+| Self-hosted delivery and IaC | Implemented as local GitLab CE/runner foundations and a validated OpenTofu local-lab module | `demo/gitlab`, `.gitlab-ci.yml`, `infra/opentofu/local-lab` | Pipeline deployment/promotion evidence is still required; this is not a public-cloud control plane |
 | Hybrid-cloud extension | Deferred | roadmap Phase 6 | Optional and never a core dependency |
 
 ## 3. Logical topology and trust zones
@@ -265,25 +270,28 @@ No component admission is complete until license, exact version/digest, security
 
 ## 12. Smallest recommended implementation slice
 
-Implement only the two-site network and inventory skeleton first:
+The network and inventory skeleton has been implemented in the WSL evaluation
+lab. The next bounded slice is evidence closure for the existing fixed incident
+action:
 
-1. Add sanitized LAS/CHI sites, prefixes, VLANs, router/service VM intent, and one recorded WireGuard circuit/tunnel relationship to NetBox using the existing governed provisioning pattern.
-2. Create two isolated Linux router/service VMs (or equivalent disposable VMs if Proxmox placement is not yet approved) from pinned configuration.
-3. Establish the WireGuard link with a default-deny inter-site firewall and one permitted health probe.
-   Until Proxmox is available, `demo/wireguard-two-site` implements this as an
-   explicitly labeled Docker container simulation with isolated internal
-   networks. It proves tunnel and policy behavior, not VM lifecycle or HA.
-   The preferred WSL workaround is now `demo/wireguard-netns`: native network
-   namespaces prove routed workload traffic and denial without Docker bridge
-   behavior. It still does not prove Proxmox lifecycle or physical HA.
+1. Generate the deterministic governance matrix with
+   `npm run aiops:incident:evaluate`. This is explicitly simulated and must not
+   be presented as live infrastructure evidence.
+2. Use the split OIDC flow to prepare a degraded observer plan, stop for human
+   review, and execute only the exact approved digest through the fixed Ansible
+   playbook.
+3. Export correlated Prometheus, Zabbix, Grafana, systemd, plan, approval,
+   execution, verification, replay rejection, and rollback-state artifacts with
+   UTC timestamps and checksums.
+4. Prove `AT-03`, `AT-05`, `AT-06`, `AT-07`, `AT-08`, `AT-09`, `AT-10`,
+   `AT-13`, and `AT-14` for this action. Record any unmet condition as a gap,
+   never as a partial pass.
 
-Windows review startup is handled by `scripts/windows/Start-AiopsLab.ps1`.
-It maintains one marked hidden WSL client, waits for NetBox and the WireGuard
-observer, and can open both localhost pages. Systemd owns service startup and
-clean shutdown; the launcher does not widen network exposure.
-4. Prove `AT-01`, `AT-02`, `AT-03`, `AT-04`, and the connectivity portions of `AT-12`, including teardown/rollback.
-
-Do not add Kubernetes, the observability stack, or AI remediation to this slice. This establishes truthful site identity, intended-versus-runtime ownership, governed change, isolation, partition behavior, and rebuild evidence with the fewest new moving parts.
+Windows review startup remains handled by `scripts/windows/Start-AiopsLab.ps1`.
+Systemd owns service startup and clean shutdown; the launcher does not widen
+network exposure. Proxmox lifecycle, independent-site HA, clean PostgreSQL
+restore, and GitLab-controlled LAS-to-CHI promotion remain separate later
+evidence slices.
 
 ## 13. Primary references used for candidate decisions
 
