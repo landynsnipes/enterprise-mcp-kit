@@ -15,9 +15,25 @@ original_replicas="$(kubectl -n "$las_namespace" get deployment "$deployment" -o
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 restored=false
 
+wait_ready() {
+  local namespace=$1 expected=$2
+  local desired ready updated available
+  for _ in $(seq 1 60); do
+    desired="$(kubectl -n "$namespace" get deployment "$deployment" -o jsonpath='{.spec.replicas}')"
+    ready="$(kubectl -n "$namespace" get deployment "$deployment" -o jsonpath='{.status.readyReplicas}')"
+    updated="$(kubectl -n "$namespace" get deployment "$deployment" -o jsonpath='{.status.updatedReplicas}')"
+    available="$(kubectl -n "$namespace" get deployment "$deployment" -o jsonpath='{.status.availableReplicas}')"
+    if [[ "$desired" == "$expected" && "${ready:-0}" == "$expected" && "${updated:-0}" == "$expected" && "${available:-0}" == "$expected" ]]; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
 restore_las() {
   kubectl -n "$las_namespace" scale deployment "$deployment" --replicas="$original_replicas" >/dev/null
-  kubectl -n "$las_namespace" rollout status deployment "$deployment" --timeout=120s >/dev/null
+  wait_ready "$las_namespace" "$original_replicas"
   restored=true
 }
 
@@ -31,7 +47,8 @@ finish() {
 trap finish EXIT
 
 [[ "$original_replicas" =~ ^[1-9][0-9]*$ ]]
-kubectl -n "$chi_namespace" rollout status deployment "$deployment" --timeout=120s >/dev/null
+chi_desired="$(kubectl -n "$chi_namespace" get deployment "$deployment" -o jsonpath='{.spec.replicas}')"
+wait_ready "$chi_namespace" "$chi_desired"
 
 kubectl -n "$las_namespace" scale deployment "$deployment" --replicas=0 >/dev/null
 for _ in $(seq 1 30); do
@@ -43,7 +60,6 @@ las_ready="$(kubectl -n "$las_namespace" get deployment "$deployment" -o jsonpat
 [[ -z "$las_ready" || "$las_ready" == 0 ]]
 
 chi_ready="$(kubectl -n "$chi_namespace" get deployment "$deployment" -o jsonpath='{.status.readyReplicas}')"
-chi_desired="$(kubectl -n "$chi_namespace" get deployment "$deployment" -o jsonpath='{.spec.replicas}')"
 [[ "$chi_ready" == "$chi_desired" && "$chi_desired" -gt 0 ]]
 
 degraded_verified_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
