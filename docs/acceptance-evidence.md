@@ -1,0 +1,30 @@
+# Acceptance evidence ledger
+
+Updated 2026-08-13. This ledger maps the architecture contract to executed,
+sanitized evidence. Runtime artifacts under `delivery-evidence/` are intentionally
+ignored because they contain timestamps and local execution context; commands,
+schemas, and verification logic remain version controlled.
+
+| Test | Status | Current evidence | Remaining limitation |
+| --- | --- | --- | --- |
+| AT-01 clean rebuild | Partial | Pinned Compose, K3s manifests, OpenTofu plan, systemd units, and repeatable setup scripts; GitLab pipeline 7 rebuilt both logical workloads | Full empty-host timed rebuild and second-run configuration diff are not yet recorded |
+| AT-02 ownership | Partial | Architecture ownership matrix; NetBox tools explicitly label intended-state evidence and unknown runtime facts; Kubernetes CPU observer names Metrics API as runtime owner | One consolidated sampled reconciliation report is still open |
+| AT-03 least privilege | Passed for implemented workflows | Role-separation and cross-tenant tests; GitLab deployer negative tests for Secrets, namespace deletion, Chicago scaling, and ReplicaSet mutation | Does not assert controls for components not yet installed on independent hosts |
+| AT-04 east-west restriction | Partial | WireGuard allowed path and denied CHI path; K3s default-deny policies; AT-12 partition proof | A probe for every architecture zone-pair row is still open |
+| AT-05 observability | Passed for F1 | `demo/observability/verify-f1-high-cpu.sh`; Prometheus alert fired in 61 seconds at 199.893218 millicores; Grafana UID `aiops-kubernetes-las-workload`; evidence SHA-256 `96785c4c987d768e5fd59456f268bd4931148a30758246a95acd681bf833d898` | Telemetry-loss unknown-state assertion remains to be automated |
+| AT-06 plan integrity | Passed for implemented schemas | Automated tests reject stale evidence, unknown fields, mutated digests, cross-trace plans, and malformed or secret-bearing WireGuard intent | Prompt-injection evaluation corpus remains intentionally small |
+| AT-07 human approval | Passed | Three-person separation, exact digest, expiry, tenant, replay, and rejection tests; GitLab LAS/CHI/F2/rollback jobs remain manual | Local GitLab root is a lab operator identity, not production federation |
+| AT-08 bounded execution | Passed for implemented actions | Fixed Ansible observer action, fixed K3s scripts, exact target namespaces, dry-run server validation, and idempotency tests | No generic shell, Kubernetes, Ansible, or vendor API is exposed to the LLM |
+| AT-09 verification/outcome | Partial | F1 alert recovery, F2 workload recovery, WireGuard recovery, deployment readiness, and durable outcome records | A single automated five-minute post-action observation window is still open |
+| AT-10 rollback | Passed for LAS workload | GitLab pipeline 7 rollback job 50 succeeded; desired-state restore job 51 succeeded; prior Kubernetes revision and checksum-bearing artifacts retained by GitLab | Chicago rollback remains available but unexecuted |
+| AT-11 backup restore | Passed for NetBox and governance PostgreSQL | NetBox counts `6|22|5`, dump SHA-256 `3b0a3824280d1deef72d76c8b913bb30a00126cc41ac04392c3df071f3f9e9db`; governance counts `1|5|5`, dump SHA-256 `0729b41331e9fdbbd1da7517f18ec7ebf2023720bae4e735f36307596fa2832f`; both restored into disposable pinned PostgreSQL containers | Lab proves database restore, not independent-host disaster recovery or encrypted off-host retention |
+| AT-12 degraded operation | Passed for logical WireGuard topology | 622-second partition, 20 samples, local paths available, cross-site path failed closed, prohibited path blocked, telemetry continued; SHA-256 `269df48ca7dbc2d356a5bd8580c1e8de62351e95ee6b3afd3699952d0c792d32` | Both logical sites share one WSL host and physical failure domain |
+| AT-13 secret/data hygiene | Passed for committed history | Gitleaks 8.30.1 full-history scan across 31 commits and about 1.28 MB; release archive verified with SHA-256 `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb`; two exact historical fingerprints are documented synthetic idempotency-key fixtures; CI scan is mandatory and redacted | Scan does not certify ignored local files or operator secret stores; those remain outside Git by policy |
+| AT-14 health/readiness | Partial | Compose health checks, Kubernetes liveness/readiness, systemd observers, Prometheus target alerts, and tested dependency recovery | One enumerated long-running-service coverage report and dependency-failure matrix remain open |
+
+## Claims boundary
+
+The current lab proves governed recommendations and actions, logical two-site
+topology, bounded execution, runtime verification, rollback, and isolated
+database recovery. It does not prove independent-site high availability,
+physical disaster recovery, production scale, or autonomous remediation.

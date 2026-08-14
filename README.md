@@ -52,6 +52,9 @@ evidence requirements, and safety boundaries are documented in the
 [Open Enterprise AIOps Platform roadmap](docs/open-enterprise-aiops-roadmap.md).
 The roadmap's Phase 0 decisions and measurable gates are captured in the
 [two-site architecture contract](docs/two-site-architecture-contract.md).
+Current pass/partial status, reproducible commands, checksums, and remaining
+gaps are maintained in the
+[acceptance evidence ledger](docs/acceptance-evidence.md).
 
 > The included NetBox environment is an evaluation and reference deployment,
 > not a turnkey production NetBox distribution. Production operators remain

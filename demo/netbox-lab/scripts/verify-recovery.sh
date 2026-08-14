@@ -26,6 +26,7 @@ source_db="$(${compose[@]} ps -q postgres)"
 source_counts="$(docker exec "$source_db" psql -At -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 'select (select count(*) from dcim_site), (select count(*) from dcim_device), (select count(*) from dcim_rack);')"
 "${compose[@]}" exec -T postgres pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB" > "$workdir/netbox.dump"
 [[ -s "$workdir/netbox.dump" ]] || { echo 'Database backup is empty.' >&2; exit 1; }
+dump_sha256="$(sha256sum "$workdir/netbox.dump" | cut -d' ' -f1)"
 
 postgres_image='docker.io/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15'
 docker run -d --rm --name "$restore_name" -e POSTGRES_DB=netbox_restore -e POSTGRES_USER=restore -e POSTGRES_PASSWORD="$restore_password" "$postgres_image" >/dev/null
@@ -37,4 +38,4 @@ restore_counts="$(docker exec "$restore_name" psql -At -U restore -d netbox_rest
 
 # The primary lab is untouched; prove its bounded read-only path still works.
 bash "$root/scripts/verify-live.sh" >/dev/null
-printf '{"result":"passed","recovery":"isolated-postgres-restore","sourceAndRestoreCounts":"%s","primaryLab":"unchanged"}\n' "$source_counts"
+printf '{"result":"passed","recovery":"isolated-postgres-restore","sourceAndRestoreCounts":"%s","dumpSha256":"%s","primaryLab":"unchanged"}\n' "$source_counts" "$dump_sha256"
