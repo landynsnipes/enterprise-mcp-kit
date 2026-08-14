@@ -28,6 +28,7 @@
     "aiops:kubernetes:verify:high-cpu": "sudo sh demo/observability/verify-f1-high-cpu.sh",
     "aiops:kubernetes:verify:post-action": "sudo bash demo/observability/verify-at09-observation-window.sh",
     "aiops:health:verify": "sudo node scripts/verify-service-health.mjs",
+    "aiops:ownership:verify": "sudo node scripts/verify-ownership-reconciliation.mjs",
     "aiops:wireguard:netns:down": "sh demo/wireguard-netns/down.sh",
     "aiops:wireguard:observe": "node demo/wireguard-netns/observer.mjs",
     "mcp:stdio": "npm run build && node dist/src/server.js",
