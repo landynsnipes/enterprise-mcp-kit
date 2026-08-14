@@ -40,6 +40,13 @@ Prometheus alert, removes the pod through an exit trap, verifies alert recovery,
 and writes checksum-bearing evidence under the ignored `delivery-evidence/`
 directory. This is deliberate failure injection, not autonomous remediation.
 
+Run `npm run aiops:kubernetes:verify:telemetry-loss` for the deterministic AT-05
+negative proof. It feeds the observation evaluator three otherwise healthy
+samples with unavailable observer telemetry and requires a `non-success`
+outcome plus the `telemetry_unavailable` failure. The resulting checksum-bearing
+artifact records the state as unknown; it does not stop a live observer or
+claim a live Metrics API outage.
+
 The cloud-event dashboard separates availability, durable queue depth, API
 governance decisions, request latency, and bounded worker outcomes. Its panels
 are technical operational evidence only: they do not approve actions or imply

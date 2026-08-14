@@ -27,6 +27,7 @@
     "aiops:wireguard:netns:verify:degraded": "sudo sh demo/wireguard-netns/verify-degraded-window.sh",
     "aiops:kubernetes:verify:high-cpu": "sudo sh demo/observability/verify-f1-high-cpu.sh",
     "aiops:kubernetes:verify:post-action": "sudo bash demo/observability/verify-at09-observation-window.sh",
+    "aiops:kubernetes:verify:telemetry-loss": "bash demo/observability/verify-at05-telemetry-loss.sh",
     "aiops:health:verify": "sudo node scripts/verify-service-health.mjs",
     "aiops:ownership:verify": "sudo node scripts/verify-ownership-reconciliation.mjs",
     "aiops:wireguard:netns:down": "sh demo/wireguard-netns/down.sh",
