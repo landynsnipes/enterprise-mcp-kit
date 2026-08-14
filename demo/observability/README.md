@@ -1,12 +1,13 @@
 # Local observability slice
 
 This Compose project runs pinned Prometheus and Grafana OSS containers against
-the bounded native-WSL WireGuard observer and governed cloud-event services. It
+the bounded native-WSL WireGuard observer, Kubernetes CPU observer, and governed cloud-event services. It
 does not expose a generic host, network, Docker, NATS, Ansible, or Kubernetes
 control surface.
 
 - Prometheus owns metric collection and source-specific WireGuard and
-  cloud-event alerts.
+  cloud-event alerts. Kubernetes CPU values come from Metrics Server runtime
+  evidence, never NetBox intended state.
 - Grafana is a localhost-only, anonymous Viewer presentation layer. Its data
   source and dashboard are read-only, version-controlled provisioning files.
 - Zabbix is intentionally not included in this slice. Its later responsibility
@@ -22,14 +23,22 @@ Review URLs:
 - Prometheus: <http://localhost:9090/>
 - WireGuard dashboard: <http://localhost:3000/d/aiops-wireguard-two-site/>
 - Cloud-event dashboard: <http://localhost:3000/d/aiops-cloud-event-operations/>
+- Kubernetes workload dashboard: <http://localhost:3000/d/aiops-kubernetes-las-workload/>
 - Cloud-event API metrics: <http://localhost:8790/metrics>
 - Cloud-event worker metrics: <http://localhost:8791/metrics>
 - Runtime evidence: <http://localhost:9108/>
+- Kubernetes CPU evidence: <http://localhost:9109/api/status>
 - NetBox intended state: <http://localhost:8000/>
 
 Use `../wireguard-netns/partition.sh` and `verify-recovery.sh` for the bounded
 failure test. A partition should make `WireGuardSiteConnectivityDegraded` fire;
 recovery should resolve it after fresh evidence arrives.
+
+Run `npm run aiops:kubernetes:verify:high-cpu` for the bounded F1 proof. It
+creates one constrained, digest-pinned LAS load pod, waits for the source-owned
+Prometheus alert, removes the pod through an exit trap, verifies alert recovery,
+and writes checksum-bearing evidence under the ignored `delivery-evidence/`
+directory. This is deliberate failure injection, not autonomous remediation.
 
 The cloud-event dashboard separates availability, durable queue depth, API
 governance decisions, request latency, and bounded worker outcomes. Its panels

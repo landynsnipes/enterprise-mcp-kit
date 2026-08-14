@@ -24,3 +24,8 @@ scrape_configs:
     static_configs:
       - targets: ['127.0.0.1:8791']
         labels: { service: cloud-event-worker, site_scope: local-evaluation }
+  - job_name: kubernetes-las-cpu
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:9109']
+        labels: { service: kubernetes-cpu-observer, site_scope: las, decision_trace_id: dtr_kubernetes_f1_v1 }

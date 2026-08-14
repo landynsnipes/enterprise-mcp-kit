@@ -1,4 +1,17 @@
 groups:
+  - name: kubernetes-las-workload
+    interval: 10s
+    rules:
+      - alert: KubernetesLasCpuObserverUnavailable
+        expr: up{job="kubernetes-las-cpu"} == 0
+        for: 20s
+        labels: { severity: critical, owner: platform-operations, site_scope: las }
+        annotations: { summary: LAS Kubernetes CPU evidence endpoint is unavailable, runbook: Restore the fixed read-only observer; do not infer workload health from NetBox., decision_trace_id: dtr_kubernetes_f1_v1 }
+      - alert: KubernetesLasPodHighCpu
+        expr: aiops_kubernetes_pod_cpu_millicores{namespace="cloud-reference"} >= 100
+        for: 30s
+        labels: { severity: warning, owner: platform-operations, site_scope: las }
+        annotations: { summary: LAS Kubernetes workload CPU exceeds 100 millicores, runbook: Review pod limit readiness and trace evidence before proposing a bounded action., decision_trace_id: dtr_kubernetes_f1_v1 }
   - name: wireguard-two-site
     interval: 10s
     rules:
