@@ -1,0 +1,10 @@
+title = "Enterprise MCP Kit secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Fixed public idempotency key used only by the governed MCP verification fixture"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^mcp-plan-live-001$''']
