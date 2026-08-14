@@ -21,6 +21,14 @@ WRITER_TOKEN_DESCRIPTION = "Enterprise MCP Kit bounded metadata writer"
 PROVISIONER_USERNAME = "demo-mcp-provisioner"
 PROVISIONER_TOKEN_DESCRIPTION = "Enterprise MCP Kit customer-site provisioner"
 
+# The open portfolio tenant is an explicit intended-state reference. Runtime
+# ownership and live telemetry remain outside NetBox; this seed only creates
+# the tenant anchor and narrowly scoped provisioning permissions.
+aiops_tenant, _ = Tenant.objects.update_or_create(
+    slug="open-enterprise-aiops",
+    defaults={"name": "Open Enterprise AIOps"},
+)
+
 site, _ = Site.objects.update_or_create(
     slug="phoenix-lab",
     defaults={"name": SITE_NAME, "status": "active", "description": "Sanitized MCP demonstration site"},
@@ -180,6 +188,30 @@ for model, constraints in [
     record_permission.object_types.set([ContentType.objects.get_for_model(model)])
     record_permission.users.set([provisioner])
 ObjectPermission.objects.filter(name="Enterprise MCP Kit bounded customer-site provisioning").delete()
+
+for model, constraints in [
+    (Site, {"tenant__slug": "open-enterprise-aiops"}),
+    (Rack, {"tenant__slug": "open-enterprise-aiops"}),
+    (Device, {"tenant__slug": "open-enterprise-aiops"}),
+    (Interface, {"device__tenant__slug": "open-enterprise-aiops"}),
+    (IPAddress, {"tenant__slug": "open-enterprise-aiops"}),
+    (VLAN, {"tenant__slug": "open-enterprise-aiops"}),
+    (Prefix, {"tenant__slug": "open-enterprise-aiops"}),
+    (VirtualMachine, {"tenant__slug": "open-enterprise-aiops"}),
+    (VMInterface, {"virtual_machine__tenant__slug": "open-enterprise-aiops"}),
+    (PowerPanel, {"site__tenant__slug": "open-enterprise-aiops"}),
+    (PowerFeed, {"tenant__slug": "open-enterprise-aiops"}),
+    (Cable, {"tenant__slug": "open-enterprise-aiops"}),
+    (Circuit, {"tenant__slug": "open-enterprise-aiops"}),
+    (Tunnel, {"tenant__slug": "open-enterprise-aiops"}),
+]:
+    model_name = model._meta.model_name
+    record_permission, _ = ObjectPermission.objects.update_or_create(
+        name=f"Enterprise MCP Kit AIOps provisioning {model_name}",
+        defaults={"description": f"View, add, and delete open-enterprise-aiops {model_name} records admitted by the bounded adapter", "enabled": True, "actions": ["view", "add", "delete"], "constraints": constraints},
+    )
+    record_permission.object_types.set([ContentType.objects.get_for_model(model)])
+    record_permission.users.set([provisioner])
 
 Token.objects.filter(user=user, description=TOKEN_DESCRIPTION).delete()
 plaintext = secrets.token_urlsafe(30)

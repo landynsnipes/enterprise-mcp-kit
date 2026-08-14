@@ -2,7 +2,7 @@
   "version": 1,
   "tenantSlug": "open-enterprise-aiops",
   "site": { "name": "Chicago Logical Site", "slug": "chicago-lab", "facility": "CHI-01", "physicalAddress": "200 Example Way, Chicago, IL", "timeZone": "America/Chicago" },
-  "vlans": [{ "name": "CHI Management", "vid": 210 }],
+  "vlans": [{ "name": "CHI Management", "vid": 211 }],
   "prefixes": [{ "prefix": "10.20.0.0/16", "vlanName": "CHI Management", "description": "Sanitized CHI management and workload summary prefix" }, { "prefix": "10.20.0.20/32", "vlanName": "CHI Management", "description": "Allowlisted WireGuard health probe" }, { "prefix": "10.255.0.2/32", "vlanName": null, "description": "CHI WireGuard heartbeat endpoint" }],
   "racks": [{ "name": "CHI-A01", "uHeight": 42 }],
   "devices": [{

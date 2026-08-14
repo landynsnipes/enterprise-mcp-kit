@@ -81,6 +81,23 @@ retention, and operational metrics. Recorded NetBox state is evidence of
 configured inventory only; provisioning does not claim live device or network
 state.
 
+## Open Enterprise AIOps baseline
+
+The two sanitized portfolio manifests use the explicit `open-enterprise-aiops`
+NetBox tenant and the non-colliding management VLAN IDs 111 (LAS) and 211
+(CHI). `npm run demo:seed` creates that tenant anchor and separate,
+record-type-and-tenant-scoped provisioner permissions. `npm run
+demo:identity:aiops` creates the distinct Keycloak planner, approver, and
+executor identities with the same tenant claim.
+
+`npm run demo:provision:aiops` is the initial governed plan, approval,
+separation negative-test, execution, audit-read, and fixed-adapter workflow
+for the two manifests. It intentionally retains the intended baseline
+records; the execution response records the IDs needed for compensating
+rollback. Use `npm run demo:provision:aiops:verify` after the baseline exists
+for a read-only check of both sites and their addresses. The local evidence artifact is
+`delivery-evidence/reconciliation/aiops-governed-provisioning.json`.
+
 `npm run demo:provision:verify:full` creates and rolls back a 16-record,
 tenant-scoped full-environment manifest. It verifies the returned record IDs
 and compensation order for every created record. This is evidence of NetBox
