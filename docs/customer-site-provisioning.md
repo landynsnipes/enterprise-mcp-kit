@@ -74,6 +74,14 @@ the dedicated credential, and rollback of the recorded creation set.
 authenticated Streamable HTTP MCP, including capability-protected audit
 history and denial of planner execution.
 
+`npm run demo:provision:verify:governed:postgres` runs a disposable
+Northstar manifest through the same plan/approve/execute/rollback boundary
+using the PostgreSQL governance store. It restarts the gateway, replays the
+same execute idempotency key, and reads the plan and append-only audit history
+after each restart. The retained lab database is an evidence fixture only; it
+does not mutate the Las Vegas/Chicago intended baseline or claim live runtime
+state.
+
 The lab permission is record-type bounded rather than a production tenant
 policy. Production execution additionally requires tenant-scoped NetBox
 permissions, a transactional governance store, rate limits, durable audit

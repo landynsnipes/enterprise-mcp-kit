@@ -69,6 +69,7 @@
     "demo:provision:aiops:verify": "AIOPS_VERIFY_ONLY=1 bash demo/netbox-lab/scripts/provision-aiops-intended-sites.sh",
     "demo:governance:mcp:verify": "bash demo/netbox-lab/scripts/verify-governance-mcp.sh",
     "demo:governance:postgres:verify": "bash demo/netbox-lab/scripts/verify-postgres-governance.sh",
+    "demo:provision:verify:governed:postgres": "bash demo/netbox-lab/scripts/verify-governed-site-provisioning-postgres.sh",
     "demo:provision:verify:tenant-boundary": "bash demo/netbox-lab/scripts/verify-provisioning-tenant-boundary.sh",
     "demo:status": "docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml ps",
     "demo:down": "docker compose --project-name enterprise-mcp-kit-demo --env-file demo/netbox-lab/.env -f demo/netbox-lab/compose.yaml down",
