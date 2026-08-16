@@ -3,12 +3,13 @@ import secrets
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from circuits.models import Circuit, CircuitTermination
-from dcim.models import Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, PowerFeed, PowerOutlet, PowerPort, Rack, Site
+from circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from dcim.models import Cable, Device, DeviceRole, DeviceType, Interface, Manufacturer, Platform, PowerFeed, PowerOutlet, PowerPanel, PowerPort, Rack, Site
 from ipam.models import IPAddress, Prefix, VLAN
 from tenancy.models import ContactAssignment, Tenant
 from users.models import ObjectPermission, Token
 from vpn.models import Tunnel, TunnelTermination
+from virtualization.models import Cluster, VirtualMachine, VMInterface
 from extras.models import CustomField, CustomFieldChoiceSet, Dashboard
 
 SITE_NAME = "Phoenix Lab"
@@ -19,6 +20,14 @@ WRITER_USERNAME = "demo-mcp-writer"
 WRITER_TOKEN_DESCRIPTION = "Enterprise MCP Kit bounded metadata writer"
 PROVISIONER_USERNAME = "demo-mcp-provisioner"
 PROVISIONER_TOKEN_DESCRIPTION = "Enterprise MCP Kit customer-site provisioner"
+
+# The open portfolio tenant is an explicit intended-state reference. Runtime
+# ownership and live telemetry remain outside NetBox; this seed only creates
+# the tenant anchor and narrowly scoped provisioning permissions.
+aiops_tenant, _ = Tenant.objects.update_or_create(
+    slug="open-enterprise-aiops",
+    defaults={"name": "Open Enterprise AIOps"},
+)
 
 site, _ = Site.objects.update_or_create(
     slug="phoenix-lab",
@@ -57,6 +66,23 @@ reconciliation_field, _ = CustomField.objects.update_or_create(
     defaults={"label": "Reconciliation status", "type": "select", "choice_set": choice_set, "required": False, "weight": 110, "description": "Recorded comparison state; not live operational state"},
 )
 reconciliation_field.object_types.set([ContentType.objects.get_for_model(Device)])
+
+# WireGuard is not a native NetBox tunnel encapsulation. Record only bounded,
+# secret-free intended state on the virtual interface; runtime state belongs to
+# WireGuard/telemetry and key material is always supplied out of band.
+for field_name, label, field_type, description in [
+    ("wireguard_peer_site", "WireGuard peer site", "text", "Sanitized intended remote site slug; not live peer state"),
+    ("wireguard_peer_device", "WireGuard peer device", "text", "Sanitized intended remote device name"),
+    ("wireguard_peer_interface", "WireGuard peer interface", "text", "Sanitized intended remote interface name"),
+    ("wireguard_allowed_prefixes", "WireGuard allowed prefixes", "json", "Bounded intended routed prefixes"),
+    ("wireguard_listen_port", "WireGuard listen port", "integer", "Intended UDP listen port"),
+    ("wireguard_peer_public_key_fingerprint", "WireGuard peer public key fingerprint", "text", "Expected peer SHA-256 fingerprint only; never key material"),
+]:
+    field, _ = CustomField.objects.update_or_create(
+        name=field_name,
+        defaults={"label": label, "type": field_type, "description": description, "required": False, "weight": 120},
+    )
+    field.object_types.set([ContentType.objects.get_for_model(Interface)])
 
 User = get_user_model()
 user, _ = User.objects.get_or_create(username=USERNAME)
@@ -135,6 +161,7 @@ provision_reference_permission, _ = ObjectPermission.objects.update_or_create(
 provision_reference_permission.object_types.set([
     ContentType.objects.get_for_model(Tenant), ContentType.objects.get_for_model(DeviceType),
     ContentType.objects.get_for_model(DeviceRole), ContentType.objects.get_for_model(Platform),
+    ContentType.objects.get_for_model(Cluster), ContentType.objects.get_for_model(Provider), ContentType.objects.get_for_model(CircuitType),
 ])
 provision_reference_permission.users.set([provisioner])
 for model, constraints in [
@@ -145,6 +172,13 @@ for model, constraints in [
     (IPAddress, {"tenant__slug": "northstar-financial"}),
     (VLAN, {"tenant__slug": "northstar-financial"}),
     (Prefix, {"tenant__slug": "northstar-financial"}),
+    (VirtualMachine, {"tenant__slug": "northstar-financial"}),
+    (VMInterface, {"virtual_machine__tenant__slug": "northstar-financial"}),
+    (PowerPanel, {"site__tenant__slug": "northstar-financial"}),
+    (PowerFeed, {"tenant__slug": "northstar-financial"}),
+    (Cable, {"tenant__slug": "northstar-financial"}),
+    (Circuit, {"tenant__slug": "northstar-financial"}),
+    (Tunnel, {"tenant__slug": "northstar-financial"}),
 ]:
     model_name = model._meta.model_name
     record_permission, _ = ObjectPermission.objects.update_or_create(
@@ -154,6 +188,30 @@ for model, constraints in [
     record_permission.object_types.set([ContentType.objects.get_for_model(model)])
     record_permission.users.set([provisioner])
 ObjectPermission.objects.filter(name="Enterprise MCP Kit bounded customer-site provisioning").delete()
+
+for model, constraints in [
+    (Site, {"tenant__slug": "open-enterprise-aiops"}),
+    (Rack, {"tenant__slug": "open-enterprise-aiops"}),
+    (Device, {"tenant__slug": "open-enterprise-aiops"}),
+    (Interface, {"device__tenant__slug": "open-enterprise-aiops"}),
+    (IPAddress, {"tenant__slug": "open-enterprise-aiops"}),
+    (VLAN, {"tenant__slug": "open-enterprise-aiops"}),
+    (Prefix, {"tenant__slug": "open-enterprise-aiops"}),
+    (VirtualMachine, {"tenant__slug": "open-enterprise-aiops"}),
+    (VMInterface, {"virtual_machine__tenant__slug": "open-enterprise-aiops"}),
+    (PowerPanel, {"site__tenant__slug": "open-enterprise-aiops"}),
+    (PowerFeed, {"tenant__slug": "open-enterprise-aiops"}),
+    (Cable, {"tenant__slug": "open-enterprise-aiops"}),
+    (Circuit, {"tenant__slug": "open-enterprise-aiops"}),
+    (Tunnel, {"tenant__slug": "open-enterprise-aiops"}),
+]:
+    model_name = model._meta.model_name
+    record_permission, _ = ObjectPermission.objects.update_or_create(
+        name=f"Enterprise MCP Kit AIOps provisioning {model_name}",
+        defaults={"description": f"View, add, and delete open-enterprise-aiops {model_name} records admitted by the bounded adapter", "enabled": True, "actions": ["view", "add", "delete"], "constraints": constraints},
+    )
+    record_permission.object_types.set([ContentType.objects.get_for_model(model)])
+    record_permission.users.set([provisioner])
 
 Token.objects.filter(user=user, description=TOKEN_DESCRIPTION).delete()
 plaintext = secrets.token_urlsafe(30)

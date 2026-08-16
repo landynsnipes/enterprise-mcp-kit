@@ -1,0 +1,4 @@
+# Synthetic public idempotency-key fixture, not a credential. The exact same
+# fixed verification value appears in two historical commits.
+9500971cb922846f91ed891011d4e95cd5534146:demo/netbox-lab/scripts/verify-governance-mcp.mjs:generic-api-key:11
+ebbda51bf4fbadadca49cdf7b84d00f7dbc8004c:demo/netbox-lab/scripts/verify-governance-mcp.mjs:generic-api-key:11

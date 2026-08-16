@@ -1,0 +1,85 @@
+groups:
+  - name: kubernetes-las-workload
+    interval: 10s
+    rules:
+      - alert: KubernetesLasCpuObserverUnavailable
+        expr: up{job="kubernetes-las-cpu"} == 0
+        for: 20s
+        labels: { severity: critical, owner: platform-operations, site_scope: las }
+        annotations: { summary: LAS Kubernetes CPU evidence endpoint is unavailable, runbook: Restore the fixed read-only observer; do not infer workload health from NetBox., decision_trace_id: dtr_kubernetes_f1_v1 }
+      - alert: KubernetesLasPodHighCpu
+        expr: aiops_kubernetes_pod_cpu_millicores{namespace="cloud-reference"} >= 100
+        for: 30s
+        labels: { severity: warning, owner: platform-operations, site_scope: las }
+        annotations: { summary: LAS Kubernetes workload CPU exceeds 100 millicores, runbook: Review pod limit readiness and trace evidence before proposing a bounded action., decision_trace_id: dtr_kubernetes_f1_v1 }
+  - name: wireguard-two-site
+    interval: 10s
+    rules:
+      - alert: WireGuardObserverUnavailable
+        expr: up{job="wireguard-two-site"} == 0
+        for: 20s
+        labels: { severity: critical, owner: platform-operations, site_scope: las-chi }
+        annotations:
+          summary: Bounded WireGuard evidence endpoint is unavailable
+          runbook: Inspect aiops-wireguard-observer.service before considering a network change.
+          decision_trace_id: dtr_wireguard_netns_v1
+      - alert: WireGuardSiteConnectivityDegraded
+        expr: aiops_wireguard_observer_up == 0
+        for: 20s
+        labels: { severity: warning, owner: network-operations, site_scope: las-chi }
+        annotations:
+          summary: Approved LAS to CHI path or tunnel health is degraded
+          runbook: Gather observer, interface, handshake, and policy evidence; do not execute remediation without approval.
+          decision_trace_id: dtr_wireguard_netns_v1
+      - alert: WireGuardPolicyBoundaryFailed
+        expr: aiops_wireguard_denied_path_blocked == 0
+        for: 10s
+        labels: { severity: critical, owner: security-operations, site_scope: las-chi }
+        annotations:
+          summary: Deliberately denied east-west path became reachable
+          runbook: Treat this as a negative-test failure and isolate the lab before any other remediation.
+          decision_trace_id: dtr_wireguard_netns_v1
+  - name: governed-cloud-events
+    interval: 10s
+    rules:
+      - alert: CloudEventServiceUnavailable
+        expr: up{job=~"cloud-event-api|cloud-event-worker"} == 0
+        for: 30s
+        labels: { severity: critical, owner: platform-operations, site_scope: local-evaluation }
+        annotations:
+          summary: Governed cloud-event API or worker metrics endpoint is unavailable
+          runbook: Inspect container health and dependency readiness; do not bypass Keycloak or JetStream controls.
+      - alert: CloudEventDeadLetterObserved
+        expr: increase(aiops_cloud_events_total{job="cloud-event-worker",outcome="dead_lettered"}[5m]) > 0
+        labels: { severity: critical, owner: platform-operations, site_scope: local-evaluation }
+        annotations:
+          summary: A strict-schema cloud event exhausted bounded delivery
+          runbook: Inspect the decision trace and dependency failure; replay only through the governed ingestion route.
+      - alert: CloudEventRetriesSustained
+        expr: increase(aiops_cloud_events_total{job="cloud-event-worker",outcome="retrying"}[5m]) > 3
+        for: 1m
+        labels: { severity: warning, owner: platform-operations, site_scope: local-evaluation }
+        annotations:
+          summary: Cloud-event worker retries are sustained
+          runbook: Check JetStream and downstream evidence recording before considering replay.
+      - alert: CloudEventQueueBacklog
+        expr: aiops_cloud_event_queue_depth{job="cloud-event-worker"} > 100
+        for: 2m
+        labels: { severity: warning, owner: platform-operations, site_scope: local-evaluation }
+        annotations:
+          summary: Governed cloud-event queue depth exceeds the bounded lab threshold
+          runbook: Check worker readiness, retry metrics, and NATS storage; do not purge evidence ad hoc.
+      - alert: CloudEventRejectionsElevated
+        expr: increase(aiops_cloud_events_total{job="cloud-event-api",outcome="rejected"}[5m]) > 10
+        for: 1m
+        labels: { severity: warning, owner: security-operations, site_scope: local-evaluation }
+        annotations:
+          summary: Cloud-event API rejection volume is elevated
+          runbook: Review bounded request logs for authentication or schema failures without exposing tokens or payloads.
+      - alert: CloudEventApiLatencyHigh
+        expr: rate(aiops_cloud_event_request_duration_milliseconds_sum{job="cloud-event-api"}[5m]) / clamp_min(rate(aiops_cloud_event_request_duration_milliseconds_count{job="cloud-event-api"}[5m]), 0.001) > 1000
+        for: 2m
+        labels: { severity: warning, owner: platform-operations, site_scope: local-evaluation }
+        annotations:
+          summary: Average governed cloud-event API latency exceeds one second
+          runbook: Inspect Keycloak JWKS and JetStream request latency before changing capacity.

@@ -1,0 +1,129 @@
+name: enterprise-aiops-wireguard
+
+x-router: &router
+  build:
+    context: ./router
+  group_add:
+    - "${AIOPS_RUNTIME_GID:-1001}"
+  cap_drop: [ALL]
+  cap_add: [NET_ADMIN]
+  read_only: true
+  restart: unless-stopped
+  sysctls:
+    net.ipv4.ip_forward: "1"
+  tmpfs:
+    - /run:size=4m,mode=0755
+    - /tmp:size=4m,mode=1777
+  healthcheck:
+    test: [CMD-SHELL, "ip link show wg0 >/dev/null"]
+    interval: 5s
+    timeout: 2s
+    retries: 12
+  security_opt:
+    - no-new-privileges:true
+
+x-probe: &probe
+  image: alpine@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
+  cap_drop: [ALL]
+  cap_add: [NET_ADMIN]
+  read_only: true
+  command: [sh, -c, "ip route replace $${REMOTE_PREFIX} via $${ROUTER}; exec tail -f /dev/null"]
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  las-router:
+    <<: *router
+    environment:
+      SITE: las-vegas-lab
+      LAN_ADDRESS: 10.10.0.10/24
+      TRANSIT_ADDRESS: 172.30.0.2/29
+      WG_ADDRESS: 10.255.0.1/30
+      PEER_ENDPOINT: 172.30.0.3:51820
+      ALLOWED_PREFIX: 10.20.0.20/32
+      ALLOWED_PREFIXES: 10.20.0.20/32,10.255.0.2/32
+      DECISION_TRACE_ID: dtr_wireguard_sim_v1
+    secrets:
+      - source: las_private_key
+        target: private_key
+      - source: chi_public_key
+        target: peer_public_key
+    networks:
+      las:
+        ipv4_address: 10.10.0.10
+      transit:
+        ipv4_address: 172.30.0.2
+
+  chi-router:
+    <<: *router
+    environment:
+      SITE: chicago-lab
+      LAN_ADDRESS: 10.20.0.10/24
+      TRANSIT_ADDRESS: 172.30.0.3/29
+      WG_ADDRESS: 10.255.0.2/30
+      PEER_ENDPOINT: 172.30.0.2:51820
+      ALLOWED_PREFIX: 10.10.0.20/32
+      ALLOWED_PREFIXES: 10.10.0.20/32,10.255.0.1/32
+      DECISION_TRACE_ID: dtr_wireguard_sim_v1
+    secrets:
+      - source: chi_private_key
+        target: private_key
+      - source: las_public_key
+        target: peer_public_key
+    networks:
+      chi:
+        ipv4_address: 10.20.0.10
+      transit:
+        ipv4_address: 172.30.0.3
+
+  las-health:
+    <<: *probe
+    environment:
+      REMOTE_PREFIX: 10.20.0.0/24
+      ROUTER: 10.10.0.10
+    networks:
+      las:
+        ipv4_address: 10.10.0.20
+
+  chi-health:
+    <<: *probe
+    environment:
+      REMOTE_PREFIX: 10.10.0.0/24
+      ROUTER: 10.20.0.10
+    networks:
+      chi:
+        ipv4_address: 10.20.0.20
+
+  chi-denied:
+    <<: *probe
+    environment:
+      REMOTE_PREFIX: 10.10.0.0/24
+      ROUTER: 10.20.0.10
+    networks:
+      chi:
+        ipv4_address: 10.20.0.30
+
+secrets:
+  las_private_key:
+    file: ./.runtime/las-private.key
+  las_public_key:
+    file: ./.runtime/las-public.key
+  chi_private_key:
+    file: ./.runtime/chi-private.key
+  chi_public_key:
+    file: ./.runtime/chi-public.key
+
+networks:
+  las:
+    internal: true
+    ipam:
+      config: [{subnet: 10.10.0.0/24}]
+  chi:
+    internal: true
+    ipam:
+      config: [{subnet: 10.20.0.0/24}]
+  transit:
+    internal: true
+    ipam:
+      config: [{subnet: 172.30.0.0/29}]

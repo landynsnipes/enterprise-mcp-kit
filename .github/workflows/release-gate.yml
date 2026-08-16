@@ -1,0 +1,59 @@
+name: Release gate
+
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - Dockerfile.mcp
+      - package.json
+      - package-lock.json
+      - deploy/production/**
+      - .github/workflows/release-gate.yml
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-gate:
+    name: SBOM, image build, and vulnerability gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run validate
+      - name: Fail on high or critical production dependency advisories
+        run: npm audit --omit=dev --audit-level=high
+      - name: Generate CycloneDX SBOM
+        run: npm sbom --omit=dev --sbom-format=cyclonedx > enterprise-mcp-kit.cdx.json
+      - name: Build immutable candidate image locally
+        run: docker build --pull --tag enterprise-mcp-kit-governance:${{ github.sha }} .
+      - name: Build stdio MCP image locally
+        run: docker build --pull -f Dockerfile.mcp --build-arg MCP_CONNECTOR=zabbix --tag enterprise-mcp-kit-zabbix:${{ github.sha }} .
+      - name: Scan candidate image for high or critical vulnerabilities
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: enterprise-mcp-kit-governance:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          scanners: vuln
+      - name: Preserve release evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: enterprise-mcp-kit-sbom-${{ github.sha }}
+          path: enterprise-mcp-kit.cdx.json
+          retention-days: 90

@@ -1,0 +1,54 @@
+name: enterprise-aiops-gitlab
+services:
+  gitlab:
+    image: docker.io/gitlab/gitlab-ce@sha256:d450658c70156b30730d2938c14f7599664e009236b9664a98f5c82160ec510b
+    hostname: gitlab.local
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://localhost:8929'
+        nginx['listen_port'] = 8929
+        gitlab_rails['initial_root_password'] = ENV['GITLAB_ROOT_PASSWORD']
+        gitlab_rails['gitlab_shell_ssh_port'] = 2224
+        prometheus_monitoring['enable'] = false
+        alertmanager['enable'] = false
+        gitlab_exporter['enable'] = false
+        node_exporter['enable'] = false
+        redis_exporter['enable'] = false
+        postgres_exporter['enable'] = false
+        puma['worker_processes'] = 2
+        sidekiq['concurrency'] = 5
+        gitlab_rails['gitlab_email_enabled'] = false
+        gitlab_rails['usage_ping_enabled'] = false
+    ports:
+      - '127.0.0.1:8929:8929'
+      - '127.0.0.1:2224:22'
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+    shm_size: 256m
+    mem_limit: 6g
+    cpus: 6
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:8929/users/sign_in >/dev/null']
+      interval: 15s
+      timeout: 12s
+      retries: 40
+      start_period: 5m
+    security_opt: ['no-new-privileges:true']
+  runner:
+    build: { context: ../.., dockerfile: demo/gitlab/Dockerfile.runner }
+    image: enterprise-aiops-gitlab-runner:19.2.0-node22-tofu1.12.1
+    depends_on: { gitlab: { condition: service_healthy } }
+    volumes:
+      - gitlab-runner-config:/etc/gitlab-runner
+    mem_limit: 512m
+    cpus: 1
+    restart: unless-stopped
+    security_opt: ['no-new-privileges:true']
+volumes:
+  gitlab-config: {}
+  gitlab-logs: {}
+  gitlab-data: {}
+  gitlab-runner-config: {}

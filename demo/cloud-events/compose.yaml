@@ -1,0 +1,48 @@
+name: enterprise-aiops-cloud-events
+services:
+  nats:
+    image: docker.io/library/nats@sha256:c11af972c99ae542de8925e6a7d9c533aa1eb039660420d2074beed6089b3bf0
+    command: ['--config', '/etc/nats/nats.conf']
+    volumes:
+      - ./.nats.generated.conf:/etc/nats/nats.conf:ro
+      - nats-data:/data
+    networks: [frontend, backend]
+    ports: ['127.0.0.1:8222:8222']
+    healthcheck: { test: ['CMD', 'wget', '-q', '-O', '-', 'http://127.0.0.1:8222/healthz?js-enabled-only=true'], interval: 5s, timeout: 3s, retries: 20, start_period: 5s }
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.50
+    security_opt: ['no-new-privileges:true']
+  api:
+    build: { context: ../.., dockerfile: Dockerfile }
+    command: ['node', 'dist/src/cloud-event-api-server.js']
+    environment: { CLOUD_EVENT_SERVICE_NAME: cloud-event-api, CLOUD_EVENT_PORT: '8790', NATS_SERVERS: 'nats://nats:4222', NATS_USER: '${NATS_API_USER}', NATS_PASSWORD: '${NATS_API_PASSWORD}', CLOUD_EVENT_OIDC_ISSUER: '${CLOUD_EVENT_OIDC_ISSUER}', CLOUD_EVENT_OIDC_JWKS_URL: 'http://keycloak:8080/realms/enterprise-mcp-kit/protocol/openid-connect/certs', CLOUD_EVENT_OIDC_AUDIENCE: '${CLOUD_EVENT_OIDC_AUDIENCE}', CLOUD_EVENT_INSECURE_JWKS_HOSTS: 'keycloak' }
+    depends_on: { nats: { condition: service_healthy } }
+    networks: [frontend, backend, identity]
+    ports: ['127.0.0.1:8790:8790']
+    healthcheck: { test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:8790/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"], interval: 5s, timeout: 3s, retries: 20, start_period: 10s }
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.50
+    security_opt: ['no-new-privileges:true']
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
+  worker:
+    build: { context: ../.., dockerfile: Dockerfile }
+    command: ['node', 'dist/src/cloud-event-worker-server.js']
+    environment: { CLOUD_EVENT_SERVICE_NAME: cloud-event-worker, CLOUD_EVENT_PORT: '8791', NATS_SERVERS: 'nats://nats:4222', NATS_USER: '${NATS_WORKER_USER}', NATS_PASSWORD: '${NATS_WORKER_PASSWORD}', CLOUD_EVENT_OIDC_ISSUER: '${CLOUD_EVENT_OIDC_ISSUER}', CLOUD_EVENT_OIDC_JWKS_URL: '${CLOUD_EVENT_OIDC_JWKS_URL}', CLOUD_EVENT_OIDC_AUDIENCE: '${CLOUD_EVENT_OIDC_AUDIENCE}', CLOUD_EVENT_INSECURE_JWKS_HOSTS: '${CLOUD_EVENT_INSECURE_JWKS_HOSTS}' }
+    depends_on: { nats: { condition: service_healthy } }
+    networks: [frontend, backend]
+    ports: ['127.0.0.1:8791:8791']
+    healthcheck: { test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:8791/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"], interval: 5s, timeout: 3s, retries: 20, start_period: 10s }
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.50
+    security_opt: ['no-new-privileges:true']
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m']
+networks:
+  frontend: { driver: bridge, driver_opts: { com.docker.network.bridge.host_binding_ipv4: '127.0.0.1' } }
+  backend: { driver: bridge, internal: true }
+  identity: { external: true, name: enterprise-mcp-kit-demo_frontend }
+volumes: { nats-data: {} }

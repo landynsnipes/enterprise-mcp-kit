@@ -73,12 +73,22 @@ VLANs, prefixes, racks, devices, interfaces, and addresses. It validates
 references and conflicts, produces an immutable dry-run digest, requires a
 different approver and executor, executes in dependency order, and records
 only returned IDs for compensation and rollback.
-Site-information maintenance should remain a separate capability with an
-explicit allowlist of address and descriptive fields.
+Site-information maintenance remains a separate capability with an explicit
+allowlist of address and descriptive fields.
 The implemented site path admits `netbox.site.information.update` for one exact
 tenant-owned site and one of `physical_address`, `shipping_address`,
 `description`, `facility`, or `time_zone`. It cannot reassign tenants, change
 status, delete sites, or patch arbitrary fields.
+
+The authenticated gateway also admits five exact inventory-intent actions:
+`netbox.ip-address-reassign`, `netbox.device-lifecycle-change`,
+`netbox.interface-intent-update`, `netbox.rack-placement-update`, and
+`netbox.device-decommission`. Each action has a fixed NetBox endpoint and
+allowlisted payload, checks the current tenant, captured `last_updated` value,
+and recorded before-state before PATCHing. The gateway verifies the returned
+state and records the exact prior values for rollback. Decommission is a
+reversible lifecycle-status change to `decommissioning`; it never deletes a
+record. These actions are not part of the public read-only MCP.
 Production deployments should set `GOVERNANCE_STORAGE_BACKEND=postgres` and
 inject `GOVERNANCE_DATABASE_URL` from a secret store. The PostgreSQL store uses
 a cross-instance advisory transaction lock, durable idempotency receipts, and

@@ -1,0 +1,19 @@
+{
+  email {$ACME_EMAIL}
+  servers {
+    metrics
+  }
+}
+
+{$NETBOX_PUBLIC_HOST} {
+  encode zstd gzip
+  reverse_proxy netbox:8080
+}
+
+{$MCP_PUBLIC_HOST} {
+  encode zstd gzip
+  reverse_proxy /mcp* governance:8787
+
+  @operations path /healthz /metrics
+  respond @operations 404
+}

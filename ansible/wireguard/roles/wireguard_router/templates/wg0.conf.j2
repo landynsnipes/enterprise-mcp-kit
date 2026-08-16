@@ -1,0 +1,10 @@
+[Interface]
+Address = {{ wireguard.address }}
+ListenPort = {{ wireguard.listen_port }}
+PrivateKey = {{ lookup('ansible.builtin.env', wireguard.private_key_env) }}
+
+[Peer]
+PublicKey = {{ lookup('ansible.builtin.env', wireguard.peer_public_key_env) }}
+Endpoint = {{ wireguard.peer_endpoint }}
+AllowedIPs = {{ wireguard.allowed_prefixes | join(',') }}
+PersistentKeepalive = 25

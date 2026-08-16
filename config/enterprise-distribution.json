@@ -12,6 +12,7 @@
       "BSD-2-Clause",
       "BSD-3-Clause",
       "ISC",
+      "Unlicense",
       "PostgreSQL"
     ],
     "deniedLicenses": [
@@ -26,7 +27,7 @@
     {
       "id": "enterprise-mcp-kit",
       "name": "Enterprise MCP Kit",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "license": "Apache-2.0",
       "source": "https://github.com/landynsnipes/enterprise-mcp-kit",
       "role": "bounded MCP integration",
@@ -79,6 +80,17 @@
       "status": "included-evaluation"
     },
     {
+      "id": "nats-server",
+      "name": "NATS Server with JetStream",
+      "version": "2.14.3",
+      "license": "Apache-2.0",
+      "source": "https://github.com/nats-io/nats-server",
+      "artifact": "docker.io/library/nats@sha256:c11af972c99ae542de8925e6a7d9c533aa1eb039660420d2074beed6089b3bf0",
+      "role": "optional durable local cloud event broker",
+      "required": false,
+      "status": "included-evaluation"
+    },
+    {
       "id": "node",
       "name": "Node.js",
       "version": ">=18",
@@ -98,6 +110,28 @@
       "role": "MCP protocol implementation",
       "required": true,
       "status": "included"
+    },
+    {
+      "id": "nats-node-transport",
+      "name": "NATS Node transport",
+      "package": "@nats-io/transport-node",
+      "version": "3.4.0",
+      "license": "Apache-2.0",
+      "source": "https://github.com/nats-io/nats.js",
+      "role": "durable cloud event transport",
+      "required": false,
+      "status": "included-evaluation"
+    },
+    {
+      "id": "nats-jetstream-client",
+      "name": "NATS JetStream client",
+      "package": "@nats-io/jetstream",
+      "version": "3.4.0",
+      "license": "Apache-2.0",
+      "source": "https://github.com/nats-io/nats.js",
+      "role": "durable event stream and bounded worker delivery",
+      "required": false,
+      "status": "included-evaluation"
     },
     {
       "id": "zod",

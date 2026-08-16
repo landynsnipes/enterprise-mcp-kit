@@ -1,0 +1,37 @@
+---
+- name: Validate admitted WireGuard variables
+  ansible.builtin.assert:
+    that:
+      - wireguard.interface == 'wg0'
+      - wireguard.listen_port | int >= 1
+      - wireguard.listen_port | int <= 65535
+      - wireguard.allowed_prefixes | length >= 1
+      - wireguard.allowed_prefixes | length <= 16
+      - lookup('ansible.builtin.env', wireguard.private_key_env) | length > 0
+      - lookup('ansible.builtin.env', wireguard.peer_public_key_env) | length > 0
+      - wireguard.package_name == 'wireguard'
+      - lookup('ansible.builtin.env', wireguard.package_version_env) is match('^[0-9][0-9A-Za-z.+:~_-]*$')
+    fail_msg: WireGuard execution is outside the approved secret or variable boundary.
+  no_log: true
+
+- name: Install pinned distribution WireGuard package
+  ansible.builtin.apt:
+    name: "{{ wireguard.package_name }}={{ lookup('ansible.builtin.env', wireguard.package_version_env) }}"
+    state: present
+    update_cache: false
+
+- name: Render bounded WireGuard configuration
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  notify: Restart WireGuard
+
+- name: Enable WireGuard interface
+  ansible.builtin.systemd_service:
+    name: wg-quick@wg0
+    enabled: true
+    state: started

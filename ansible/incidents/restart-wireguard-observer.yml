@@ -1,0 +1,29 @@
+---
+- name: Restart only the approved WireGuard evidence observer
+  hosts: localhost
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Restart the fixed systemd unit
+      ansible.builtin.systemd_service:
+        name: aiops-wireguard-observer.service
+        state: restarted
+      register: observer_restart
+    - name: Wait for the bounded health endpoint
+      ansible.builtin.uri:
+        url: http://127.0.0.1:9108/health
+        method: GET
+        return_content: true
+        status_code: 200
+      register: observer_health
+      retries: 10
+      delay: 1
+      until: observer_health.json.healthy | default(false) | bool
+    - name: Emit bounded execution evidence
+      ansible.builtin.debug:
+        msg:
+          action: restart_wireguard_observer
+          target: aiops-wireguard-observer.service
+          changed: "{{ observer_restart.changed | bool }}"
+          healthy: "{{ observer_health.json.healthy | bool }}"
+          decision_trace_id: dtr_wireguard_netns_v1

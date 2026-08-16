@@ -3,14 +3,14 @@ import { GovernanceAuthorizationError, GovernanceValidationError } from './gover
 import type { VerifiedOidcClaims } from './governance-identity.js';
 
 type Fetch = (input: URL | string, init?: RequestInit) => Promise<Response>;
-export interface OidcJwksVerifierOptions { issuer: string; audience: string; jwksUrl: string; allowInsecureLoopback?: boolean; fetch?: Fetch; now?: () => Date; clockSkewSeconds?: number; maxTokenAgeSeconds?: number; }
+export interface OidcJwksVerifierOptions { issuer: string; audience: string; jwksUrl: string; allowInsecureLoopback?: boolean; allowedInsecureJwksHosts?: string[]; fetch?: Fetch; now?: () => Date; clockSkewSeconds?: number; maxTokenAgeSeconds?: number; }
 type Header = { alg?: unknown; kid?: unknown; typ?: unknown };
 type Jwk = { kty?: unknown; kid?: unknown; n?: unknown; e?: unknown; use?: unknown };
 
 /** Verifies RS256 access tokens against an issuer JWKS; unsigned and symmetric tokens are rejected. */
 export class OidcJwksVerifier {
   private readonly fetch: Fetch; private readonly now: () => Date;
-  constructor(private readonly options: OidcJwksVerifierOptions) { if ((!isHttps(options.issuer) && !(options.allowInsecureLoopback && isLoopbackHttp(options.issuer))) || (!isHttps(options.jwksUrl) && !(options.allowInsecureLoopback && isLoopbackHttp(options.jwksUrl))) || !isText(options.audience)) throw new GovernanceValidationError('OIDC issuer and JWKS URL must use HTTPS unless explicit loopback lab mode is enabled.'); this.fetch = options.fetch ?? globalThis.fetch; this.now = options.now ?? (() => new Date()); }
+  constructor(private readonly options: OidcJwksVerifierOptions) { if ((!isHttps(options.issuer) && !(options.allowInsecureLoopback && isLoopbackHttp(options.issuer))) || (!isHttps(options.jwksUrl) && !(options.allowInsecureLoopback && (isLoopbackHttp(options.jwksUrl) || isAllowedLabHttp(options.jwksUrl, options.allowedInsecureJwksHosts)))) || !isText(options.audience)) throw new GovernanceValidationError('OIDC issuer and JWKS URL must use HTTPS unless an exact lab host is explicitly allowed.'); this.fetch = options.fetch ?? globalThis.fetch; this.now = options.now ?? (() => new Date()); }
   async verify(token: string): Promise<VerifiedOidcClaims> {
     if (!isText(token) || token.length > 8192) throw new GovernanceAuthorizationError('Bearer token is invalid.'); const parts = token.split('.'); if (parts.length !== 3) throw new GovernanceAuthorizationError('Bearer token is invalid.');
     const header = decode<Header>(parts[0]); const claims = decode<VerifiedOidcClaims & { exp?: unknown; nbf?: unknown }>(parts[1]);
@@ -29,3 +29,4 @@ function audiences(value: unknown): string[] { return Array.isArray(value) ? val
 function isText(value: unknown): value is string { return typeof value === 'string' && value.length > 0 && value.trim() === value; }
 function isHttps(value: unknown): boolean { try { return isText(value) && new URL(value).protocol === 'https:'; } catch { return false; } }
 function isLoopbackHttp(value: unknown): boolean { try { const url = new URL(String(value)); return url.protocol === 'http:' && ['127.0.0.1', 'localhost', '::1'].includes(url.hostname); } catch { return false; } }
+function isAllowedLabHttp(value: unknown, allowed: string[] | undefined): boolean { try { const url = new URL(String(value)); return url.protocol === 'http:' && Array.isArray(allowed) && allowed.length <= 4 && allowed.includes(url.hostname) && allowed.every((host) => /^[a-z0-9][a-z0-9.-]{0,62}$/.test(host)); } catch { return false; } }

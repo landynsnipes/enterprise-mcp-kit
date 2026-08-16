@@ -6,8 +6,11 @@ demo/netbox-lab/.governance-write.env
 demo/netbox-lab/.governance-provision.env
 !.env.example
 node_modules/
+deploy/production/*.env
+deploy/production/.env
 dist/
 coverage/
+delivery-evidence/
 __pycache__/
 *.py[cod]
 *.orig

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "tenantSlug": "open-enterprise-aiops",
+  "site": { "name": "Las Vegas Logical Site", "slug": "las-vegas-lab", "facility": "LAS-01", "physicalAddress": "100 Example Way, Las Vegas, NV", "timeZone": "America/Los_Angeles" },
+  "vlans": [{ "name": "LAS Management", "vid": 111 }],
+  "prefixes": [{ "prefix": "10.10.0.0/16", "vlanName": "LAS Management", "description": "Sanitized LAS management and workload summary prefix" }, { "prefix": "10.10.0.20/32", "vlanName": "LAS Management", "description": "Allowlisted WireGuard health probe" }, { "prefix": "10.255.0.1/32", "vlanName": null, "description": "LAS WireGuard heartbeat endpoint" }],
+  "racks": [{ "name": "LAS-A01", "uHeight": 42 }],
+  "devices": [{
+    "name": "aiops-las-edge-01", "rackName": "LAS-A01", "position": 42, "face": "front", "deviceTypeSlug": "edge-router-1000", "roleSlug": "edge-router", "platformSlug": "example-network-os",
+    "interfaces": [
+      { "name": "mgmt0", "address": "10.10.0.10/24" },
+      { "name": "wg0", "address": "10.255.0.1/30", "wireguard": { "peerSiteSlug": "chicago-lab", "peerDeviceName": "aiops-chi-edge-01", "peerInterfaceName": "wg0", "allowedPrefixes": ["10.20.0.20/32", "10.255.0.2/32"], "listenPort": 51820, "peerPublicKeyFingerprint": "sha256:9c4b43dbc53cea95ce49672e72b881c4005adf0b4daec09d00ec5ca08ab73a91" } }
+    ]
+  }]
+}

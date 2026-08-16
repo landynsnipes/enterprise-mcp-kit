@@ -1,0 +1,8 @@
+---
+- name: Apply approved WireGuard router intent
+  hosts: wireguard_routers
+  become: true
+  gather_facts: false
+  serial: 1
+  roles:
+    - wireguard_router

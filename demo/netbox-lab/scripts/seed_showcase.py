@@ -300,6 +300,7 @@ for cid, circuit_type, tenant, a, z, description in [
 
 cluster_type = save(ClusterType, {"slug": "kubernetes-platform"}, {"name": "Kubernetes Platform", "description": "Sanitized platform cluster"})
 summit_cluster = save(Cluster, {"name": "summit-prod-west"}, {"type": cluster_type, "tenant": summit, "status": "active", "scope_type": ContentType.objects.get_for_model(Site), "scope_id": summit_edge.pk, "description": "Summit production platform"})
+northstar_cluster = save(Cluster, {"name": "northstar-governance-lab"}, {"type": cluster_type, "tenant": northstar, "status": "active", "scope_type": ContentType.objects.get_for_model(Site), "scope_id": phx.pk, "description": "Sanitized Northstar governance verification cluster"})
 for name, address, description in [
     ("summit-control-01", "10.20.10.31/24", "Platform control plane"),
     ("summit-worker-01", "10.20.10.41/24", "Platform worker"),
@@ -314,6 +315,7 @@ for name, address, description in [
 # Keep intended and observed software state distinct. The fixed timestamp makes
 # repeated seeds deterministic and the source field makes provenance explicit.
 device_content_type = ContentType.objects.get_for_model(Device)
+interface_content_type = ContentType.objects.get_for_model(Interface)
 virtual_machine_content_type = ContentType.objects.get_for_model(VirtualMachine)
 cluster_content_type = ContentType.objects.get_for_model(Cluster)
 version_fields = [
@@ -343,6 +345,17 @@ for field_name, label, description in version_fields:
 reconciliation_choices = save(CustomFieldChoiceSet, {"name": "Reconciliation status"}, {"extra_choices": [[value, value] for value in ["matched", "drifted", "missing-observation", "exception", "not-evaluated"]]})
 reconciliation_field = save(CustomField, {"name": "reconciliation_status"}, {"label": "Reconciliation status", "type": "select", "choice_set": reconciliation_choices, "description": "Recorded comparison state; not live operational state", "required": False, "weight": 110})
 reconciliation_field.object_types.set([device_content_type])
+
+for field_name, label, field_type, description in [
+    ("wireguard_peer_site", "WireGuard peer site", "text", "Sanitized intended remote site slug; not live peer state"),
+    ("wireguard_peer_device", "WireGuard peer device", "text", "Sanitized intended remote device name"),
+    ("wireguard_peer_interface", "WireGuard peer interface", "text", "Sanitized intended remote interface name"),
+    ("wireguard_allowed_prefixes", "WireGuard allowed prefixes", "json", "Bounded intended routed prefixes"),
+    ("wireguard_listen_port", "WireGuard listen port", "integer", "Intended UDP listen port"),
+    ("wireguard_peer_public_key_fingerprint", "WireGuard peer public key fingerprint", "text", "Expected peer SHA-256 fingerprint only; never key material"),
+]:
+    field = save(CustomField, {"name": field_name}, {"label": label, "type": field_type, "description": description, "required": False, "weight": 120})
+    field.object_types.set([interface_content_type])
 
 network_platform = save(
     Platform,

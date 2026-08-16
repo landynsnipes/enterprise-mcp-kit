@@ -1,0 +1,71 @@
+stages: [validate, test, plan, deploy_las, promote_chi, degraded_test, rollback]
+
+default:
+  interruptible: true
+  retry: { max: 1, when: [runner_system_failure] }
+
+variables:
+  KUBECONFIG: /etc/gitlab-runner/kubeconfig
+
+validate-distribution:
+  stage: validate
+  image: docker.io/library/node@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436
+  script: ["npm ci", "npm run typecheck", "npm run validate:distribution", "git diff --check"]
+
+test-contracts:
+  stage: test
+  image: docker.io/library/node@sha256:d649c27dae7ba0137b3cef5dd75baa422c08dc3d9e3fc0c23dfb172dc3cc6436
+  script: ["npm ci", "npm test"]
+
+plan-local-sites:
+  stage: plan
+  image: ghcr.io/opentofu/opentofu@sha256:1cdf44e7a44a67c7838ada83c71ad28b4c4e1571b47ad1c5b592624c2c8f35b5
+  script:
+    - tofu -chdir=infra/opentofu/local-lab init -backend=false
+    - tofu -chdir=infra/opentofu/local-lab validate
+    - tofu -chdir=infra/opentofu/local-lab plan -out=../../../local-sites.tfplan
+  artifacts: { paths: [local-sites.tfplan], expire_in: 1 day }
+
+deploy-local-k3s:
+  stage: deploy_las
+  script: ["bash demo/gitlab/scripts/deploy-k3s-site.sh las deploy"]
+  environment: { name: local/las }
+  when: manual
+  allow_failure: false
+  artifacts: { paths: [delivery-evidence/las/], expire_in: 30 days }
+
+promote-local-k3s-chi:
+  stage: promote_chi
+  needs: [deploy-local-k3s]
+  script: ["bash demo/gitlab/scripts/deploy-k3s-site.sh chi deploy"]
+  environment: { name: local/chi }
+  when: manual
+  allow_failure: false
+  artifacts: { paths: [delivery-evidence/chi/], expire_in: 30 days }
+
+verify-site-service-loss:
+  stage: degraded_test
+  needs: [deploy-local-k3s, promote-local-k3s-chi]
+  script: ["bash demo/gitlab/scripts/verify-site-service-loss.sh"]
+  environment: { name: local/two-site-proof }
+  when: manual
+  allow_failure: false
+  artifacts: { paths: [delivery-evidence/degraded-operation/], expire_in: 30 days }
+
+rollback-local-k3s-las:
+  stage: rollback
+  needs: [deploy-local-k3s]
+  script: ["bash demo/gitlab/scripts/deploy-k3s-site.sh las rollback"]
+  environment: { name: local/las }
+  when: manual
+  allow_failure: false
+  artifacts: { paths: [delivery-evidence/las/], expire_in: 30 days }
+
+rollback-local-k3s-chi:
+  stage: rollback
+  needs: [promote-local-k3s-chi]
+  script: ["bash demo/gitlab/scripts/deploy-k3s-site.sh chi rollback"]
+  environment: { name: local/chi }
+  when: manual
+  allow_failure: false
+  artifacts: { paths: [delivery-evidence/chi/], expire_in: 30 days }

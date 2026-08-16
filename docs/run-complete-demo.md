@@ -1,39 +1,38 @@
-# Run the complete evaluation lab
+# Run the complete NetBox + MCP evaluation lab
 
-Use this path when you want to evaluate NetBox and the MCP integration together
-without connecting to an existing enterprise deployment.
+Choose this path to evaluate a full NetBox environment and the MCP together
+with sanitized, synthetic inventory. It is designed for demonstrations,
+integration testing, and learning—not production use.
 
 ## What the lab contains
 
-- NetBox web
-- NetBox worker
-- PostgreSQL
-- Valkey for the task queue
-- Valkey for caching
-- The repository’s read-only NetBox adapter and stdio MCP server
+- NetBox web and worker
+- PostgreSQL and Valkey services
+- A native NetBox dashboard with inventory, connectivity, power, and MCP-readiness views
+- The five-tool read-only stdio MCP
+- Optional local governance proofs for approval-gated writes and provisioning
 
-The containerized services are isolated under `demo/netbox-lab/`. Only NetBox
-web is published, and it is bound to `127.0.0.1:8000`.
+Only NetBox web is published, on `127.0.0.1:8000`. Generated credentials and
+runtime configuration stay local and are ignored by Git.
 
-## Run the live proof
+## Install and start
 
-After starting the lab:
+From a checked-out repository with Docker Engine and Docker Compose v2:
 
 ```sh
+npm ci
+npm run validate
+npm run demo:env
+npm run demo:up
+npm run demo:status
 npm run demo:seed
 npm run demo:verify
 ```
 
-The seed is sanitized and repeatable. It creates one demonstration device and a
-dedicated NetBox identity with device-view permission and a write-disabled v2
-API token. Generated runtime configuration remains local-only.
-
-The verification command performs live lookups through the HTTP adapter and an
-end-to-end stdio MCP call. It also verifies the missing-device error path and
-confirms that the token is write-disabled.
-
-For the current commands, component pins, and verified limitations, follow the
-[lab README](../demo/netbox-lab/README.md).
+`demo:env` creates the local secret file once and refuses to overwrite it.
+`demo:seed` is repeatable. `demo:verify` proves all five read-only tools,
+including an end-to-end stdio call, a missing-device response, and the
+write-disabled demo token.
 
 ## Explore the enterprise showcase
 
@@ -42,23 +41,69 @@ npm run demo:seed:showcase
 npm run demo:verify:showcase
 ```
 
-This profile models three sanitized organizations across physical data centers,
-hybrid cloud infrastructure, and managed services. It includes populated rack
-elevations, connected network cabling, redundant A/B rack power, circuits,
-IPAM, virtualization, tenancy, and operational contacts.
+The showcase contains three sanitized organizations across data centers,
+hybrid cloud, and managed services. It includes rack elevations, cabling,
+redundant A/B power evidence, circuits, IPAM, virtualization, contacts,
+software posture, and VPN inventory. It is intentionally not representative of
+any customer’s environment.
 
-The showcase verifier also checks platform/version provenance, device services,
-concrete circuit handoffs, VPN terminations, redundancy groups, and failure
-domains. These records provide realistic context for future bounded site, rack,
-connectivity, power, circuit, and change-impact MCP tools; they do not expand
-the current single-tool MCP boundary.
+## Connect and use the local MCP
 
-## Production boundary
+Start the stdio process using the local, write-disabled configuration created
+by the seed:
 
-This lab is a disposable evaluation and reference environment. It is not a
-production deployment template. Do not reuse its generated secrets, sample
-credentials, network assumptions, or availability model in production.
+```sh
+set -a
+. demo/netbox-lab/.mcp.env
+set +a
+npm run mcp:stdio
+```
 
-Organizations adopting NetBox should follow the official NetBox deployment and
-operations guidance. The reusable product in this repository is the bounded MCP
-integration and its workflow contract.
+Point an MCP-capable AI client at that command, then use precise requests:
+
+- “Show context for `edge-phx-01`.”
+- “Show the overview for `Phoenix Lab`.”
+- “Show direct evidence from `Phoenix Lab` to `Reno Lab`.”
+- “Show rack `PHX-A01` at `Phoenix Lab`.”
+- “Show the recorded power path for `edge-phx-01`.”
+
+The exact tool contracts and their recorded-evidence limits are documented in
+[Connect an existing NetBox deployment](connect-existing-netbox.md). The lab
+MCP remains read-only even though optional governance tests exercise isolated
+write workflows.
+
+## Optional governed-write proofs
+
+The lab can prove the approval-gated workflows separately. Run these only
+after the minimal and showcase checks pass:
+
+```sh
+npm run demo:identity:up
+npm run demo:identity:verify
+npm run demo:write:verify
+npm run demo:write:verify:software
+npm run demo:write:verify:site
+npm run demo:provision:verify
+npm run demo:provision:verify:governed
+npm run demo:provision:verify:full
+npm run demo:governance:mcp:verify
+npm run demo:governance:postgres:verify
+npm run demo:provision:verify:tenant-boundary
+```
+
+The full-environment proof creates and rolls back a bounded, tenant-scoped
+manifest covering site, VLAN, prefix, rack, devices, virtual machine, IP,
+power panel/feed, circuit, IPsec-tunnel inventory, and cable records. It does
+not configure real equipment, create a live network, or establish a VPN.
+
+## Clean up
+
+```sh
+npm run demo:down
+```
+
+This stops the lab and preserves named volumes. The evaluation environment is
+not a production deployment template. Do not reuse its secrets, identities,
+localhost networking, availability model, or sample data in production. For a
+clean self-hosted installation, follow the
+[private Docker Compose production reference](install-production-compose.md).

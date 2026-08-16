@@ -1,0 +1,68 @@
+import { createHash, randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+import { requireCapability } from './governance-capabilities.js';
+import { GovernanceAuthorizationError, GovernanceStateError, GovernanceValidationError, type GovernanceActor } from './governance.js';
+
+const run = promisify(execFile);
+export const incidentAction = 'restart_wireguard_observer' as const;
+export const incidentTarget = 'aiops-wireguard-observer.service' as const;
+export type IncidentState='planned'|'approved'|'executing'|'verified'|'execution_failed'|'rollback_recorded';
+export interface IncidentEvidence { source:'prometheus'|'zabbix'|'observer'|'systemd'; observedAt:string; healthy:boolean; summary:string; decisionTraceId:string; }
+export interface IncidentAuditEvent { event:string; actorId:string; occurredAt:string; detail:string; }
+export interface IncidentPlan { version:1; id:string; tenantId:string; initiatedBy:string; approvedBy:string|null; approvedAt:string|null; approvalDigest:string; approvedDigest:string|null; action:typeof incidentAction; target:typeof incidentTarget; state:IncidentState; createdAt:string; expiresAt:string; ruleVersion:'wireguard-observer-restart-v1'; promptVersion:string|null; confidence:number; evidence:IncidentEvidence[]; before:{active:boolean;mainPid:number}; outcome:null|{changed:boolean;beforePid:number;afterPid:number;healthy:boolean;verifiedAt:string}; rollback:null|{kind:'recorded-state-noop';activeStateRestored:boolean;recordedAt:string;reason:string}; audit:IncidentAuditEvent[]; }
+export interface ObserverExecutor { snapshot():Promise<{active:boolean;mainPid:number}>; restart():Promise<void>; healthy():Promise<boolean>; }
+
+export class GovernedIncidentWorkflow {
+  constructor(private readonly executor:ObserverExecutor,private readonly now:()=>Date=()=>new Date(),private readonly newId:()=>string=randomUUID){}
+  async plan(actor:GovernanceActor,input:{expiresAt:string;confidence:number;promptVersion:string|null;evidence:IncidentEvidence[]}):Promise<IncidentPlan>{
+    requireCapability(actor,'plan:create');validateInput(input,this.now());const before=await this.executor.snapshot();
+    const plan:IncidentPlan={version:1,id:this.newId(),tenantId:actor.tenantId,initiatedBy:actor.subjectId,approvedBy:null,approvedAt:null,approvalDigest:'',approvedDigest:null,action:incidentAction,target:incidentTarget,state:'planned',createdAt:this.now().toISOString(),expiresAt:input.expiresAt,ruleVersion:'wireguard-observer-restart-v1',promptVersion:input.promptVersion,confidence:input.confidence,evidence:input.evidence.map(x=>({...x})),before,outcome:null,rollback:null,audit:[]};plan.approvalDigest=incidentApprovalDigest(plan);
+    record(plan,'plan_created',actor,'Strict-schema recommendation created; no action executed.');return structuredClone(plan);
+  }
+  approve(actor:GovernanceActor,plan:IncidentPlan,reason:string,approvedDigest:string):IncidentPlan{requireCapability(actor,'plan:approve');sameTenant(actor,plan);if(actor.subjectId===plan.initiatedBy)throw new GovernanceAuthorizationError('Incident plan initiator cannot self-approve.');if(plan.state!=='planned')throw new GovernanceStateError(`Incident plan cannot be approved from ${plan.state}.`);if(Date.parse(plan.expiresAt)<=this.now().getTime())throw new GovernanceStateError('Incident plan expired before approval.');exact(reason);if(!/^[a-f0-9]{64}$/.test(approvedDigest)||approvedDigest!==plan.approvalDigest||incidentApprovalDigest(plan)!==plan.approvalDigest)throw new GovernanceStateError('Incident plan no longer matches the exact reviewed digest.');plan.state='approved';plan.approvedBy=actor.subjectId;plan.approvedAt=this.now().toISOString();plan.approvedDigest=approvedDigest;record(plan,'plan_approved',actor,reason);return structuredClone(plan);}
+  async execute(actor:GovernanceActor,plan:IncidentPlan):Promise<IncidentPlan>{requireCapability(actor,'plan:execute');sameTenant(actor,plan);if(actor.subjectId===plan.initiatedBy||actor.subjectId===plan.approvedBy)throw new GovernanceAuthorizationError('Planner and approver cannot execute the incident plan.');if(plan.state!=='approved'||plan.action!==incidentAction||plan.target!==incidentTarget)throw new GovernanceStateError('Only the approved fixed incident action can execute.');if(plan.approvedDigest!==plan.approvalDigest||incidentApprovalDigest(plan)!==plan.approvalDigest)throw new GovernanceStateError('Approved incident digest does not match the executable plan.');if(Date.parse(plan.expiresAt)<=this.now().getTime())throw new GovernanceStateError('Incident plan expired before execution.');plan.state='executing';record(plan,'execution_started',actor,'Fixed Ansible playbook admitted.');
+    try{await this.executor.restart();const after=await this.executor.snapshot();const healthy=await this.executor.healthy();if(!after.active||!healthy||after.mainPid<=0||after.mainPid===plan.before.mainPid)throw new GovernanceStateError('Post-restart verification did not prove a healthy new observer process.');plan.outcome={changed:true,beforePid:plan.before.mainPid,afterPid:after.mainPid,healthy,verifiedAt:this.now().toISOString()};plan.state='verified';record(plan,'execution_verified',actor,'Systemd active, process identity changed, and bounded health evidence returned healthy.');return structuredClone(plan);}catch(error){plan.state='execution_failed';record(plan,'execution_failed',actor,error instanceof Error?error.message:'Bounded execution failed.');return structuredClone(plan);}
+  }
+  async recordRollback(actor:GovernanceActor,plan:IncidentPlan,reason:string):Promise<IncidentPlan>{requireCapability(actor,'plan:execute');sameTenant(actor,plan);exact(reason);if(plan.state!=='verified'||!plan.outcome)throw new GovernanceStateError('Rollback state can be recorded only after verified execution.');const current=await this.executor.snapshot();const healthy=await this.executor.healthy();if(!current.active||!healthy)throw new GovernanceStateError('Recorded active state is not currently restored.');plan.rollback={kind:'recorded-state-noop',activeStateRestored:true,recordedAt:this.now().toISOString(),reason};plan.state='rollback_recorded';record(plan,'rollback_state_recorded',actor,'Restart changes no configuration; recorded active state and health were preserved.');return structuredClone(plan);}
+}
+
+export function resolveIncidentPlaybook(playbook=process.env.INCIDENT_PLAYBOOK):string{
+  if(playbook){
+    if(!path.isAbsolute(playbook)||!existsSync(playbook))throw new GovernanceValidationError('INCIDENT_PLAYBOOK must be an existing absolute path.');
+    return playbook;
+  }
+  const here=path.dirname(fileURLToPath(import.meta.url));
+  const candidates=[path.resolve(here,'../../ansible/incidents/restart-wireguard-observer.yml'),path.resolve(here,'../ansible/incidents/restart-wireguard-observer.yml')];
+  const found=candidates.find(candidate=>existsSync(candidate));
+  if(!found)throw new GovernanceValidationError('Incident playbook was not found relative to the repository. Set INCIDENT_PLAYBOOK to an absolute path.');
+  return found;
+}
+export class AnsibleObserverExecutor implements ObserverExecutor{
+  constructor(private readonly playbook=resolveIncidentPlaybook()){}
+  async snapshot(){let state='unknown';try{state=(await run('/usr/bin/systemctl',['is-active',incidentTarget])).stdout.trim();}catch(error){state=String((error as {stdout?:unknown}).stdout??'unknown').trim();}const {stdout:pid}=await run('/usr/bin/systemctl',['show',incidentTarget,'--property=MainPID','--value']);return{active:state==='active',mainPid:Number(pid.trim())};}
+  async restart(){await run('/usr/bin/ansible-playbook',['--inventory','localhost,','--connection','local',this.playbook],{timeout:60_000,maxBuffer:256*1024});}
+  async healthy(){try{const response=await fetch('http://127.0.0.1:9108/health',{signal:AbortSignal.timeout(5_000)});return response.ok&&(await response.json() as {healthy?:unknown}).healthy===true;}catch{return false;}}
+}
+function validateInput(input:{expiresAt:string;confidence:number;promptVersion:string|null;evidence:IncidentEvidence[]},now:Date){
+  assertExactKeys(input,['expiresAt','confidence','promptVersion','evidence'],'Incident recommendation');
+  const nowMs=now.getTime();
+  const expiry=Date.parse(input?.expiresAt);
+  if(!Number.isFinite(expiry)||expiry<=nowMs||expiry>nowMs+15*60_000||!Number.isFinite(input.confidence)||input.confidence<0||input.confidence>1||!Array.isArray(input.evidence)||input.evidence.length<2||input.evidence.length>8||!input.evidence.some(item=>item.healthy===false))throw new GovernanceValidationError('Incident recommendation metadata is invalid, stale, or lacks degraded evidence.');
+  for(const evidence of input.evidence){
+    assertExactKeys(evidence,['source','observedAt','healthy','summary','decisionTraceId'],'Incident evidence');
+    const observedAt=Date.parse(evidence.observedAt);
+    if(!['prometheus','zabbix','observer','systemd'].includes(evidence.source)||!Number.isFinite(observedAt)||observedAt<nowMs-2*60_000||observedAt>nowMs+5_000||evidence.decisionTraceId!=='dtr_wireguard_netns_v1'||typeof evidence.healthy!=='boolean')throw new GovernanceValidationError('Incident evidence is invalid, stale, future-dated, or outside the admitted decision trace.');
+    exact(evidence.summary);
+  }
+  if(input.promptVersion!==null)exact(input.promptVersion);
+}
+function assertExactKeys(value:unknown,allowed:string[],label:string){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length!==allowed.length||Object.keys(value).some(key=>!allowed.includes(key)))throw new GovernanceValidationError(`${label} contains missing or unknown fields.`);}
+function sameTenant(actor:GovernanceActor,plan:IncidentPlan){if(actor.tenantId!==plan.tenantId)throw new GovernanceAuthorizationError('Incident plan is outside the actor tenant scope.');}
+function exact(value:string){if(typeof value!=='string'||!value||value.trim()!==value||value.length>500)throw new GovernanceValidationError('Incident text must be exact and bounded.');}
+function record(plan:IncidentPlan,event:string,actor:GovernanceActor,detail:string){plan.audit.push({event,actorId:actor.subjectId,occurredAt:new Date().toISOString(),detail});}
+export function incidentApprovalDigest(plan:IncidentPlan):string{const immutable={version:plan.version,id:plan.id,tenantId:plan.tenantId,initiatedBy:plan.initiatedBy,action:plan.action,target:plan.target,createdAt:plan.createdAt,expiresAt:plan.expiresAt,ruleVersion:plan.ruleVersion,promptVersion:plan.promptVersion,confidence:plan.confidence,evidence:plan.evidence,before:plan.before};return createHash('sha256').update(JSON.stringify(canonical(immutable))).digest('hex');}
+function canonical(value:unknown):unknown{if(Array.isArray(value))return value.map(canonical);if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value as Record<string,unknown>).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,canonical(item)]));return value;}

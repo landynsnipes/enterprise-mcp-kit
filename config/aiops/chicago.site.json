@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "tenantSlug": "open-enterprise-aiops",
+  "site": { "name": "Chicago Logical Site", "slug": "chicago-lab", "facility": "CHI-01", "physicalAddress": "200 Example Way, Chicago, IL", "timeZone": "America/Chicago" },
+  "vlans": [{ "name": "CHI Management", "vid": 211 }],
+  "prefixes": [{ "prefix": "10.20.0.0/16", "vlanName": "CHI Management", "description": "Sanitized CHI management and workload summary prefix" }, { "prefix": "10.20.0.20/32", "vlanName": "CHI Management", "description": "Allowlisted WireGuard health probe" }, { "prefix": "10.255.0.2/32", "vlanName": null, "description": "CHI WireGuard heartbeat endpoint" }],
+  "racks": [{ "name": "CHI-A01", "uHeight": 42 }],
+  "devices": [{
+    "name": "aiops-chi-edge-01", "rackName": "CHI-A01", "position": 42, "face": "front", "deviceTypeSlug": "edge-router-1000", "roleSlug": "edge-router", "platformSlug": "example-network-os",
+    "interfaces": [
+      { "name": "mgmt0", "address": "10.20.0.10/24" },
+      { "name": "wg0", "address": "10.255.0.2/30", "wireguard": { "peerSiteSlug": "las-vegas-lab", "peerDeviceName": "aiops-las-edge-01", "peerInterfaceName": "wg0", "allowedPrefixes": ["10.10.0.20/32", "10.255.0.1/32"], "listenPort": 51820, "peerPublicKeyFingerprint": "sha256:4b2ee004edde47b88b35babbcbddf7f4b83f673cda062371c3a0dc4dff55aed8" } }
+    ]
+  }]
+}

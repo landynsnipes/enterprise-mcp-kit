@@ -143,6 +143,54 @@
       "objectTypes": ["dcim.device", "circuits.circuit", "virtualization.virtualmachine"],
       "status": "planned",
       "purpose": "Expiry of a reviewed policy exception"
+    },
+    {
+      "name": "wireguard_peer_site",
+      "label": "WireGuard peer site",
+      "type": "text",
+      "objectTypes": ["dcim.interface"],
+      "status": "implemented-migration-planned",
+      "purpose": "Sanitized intended remote site slug; not live peer state"
+    },
+    {
+      "name": "wireguard_peer_device",
+      "label": "WireGuard peer device",
+      "type": "text",
+      "objectTypes": ["dcim.interface"],
+      "status": "implemented-migration-planned",
+      "purpose": "Sanitized intended remote device name"
+    },
+    {
+      "name": "wireguard_peer_interface",
+      "label": "WireGuard peer interface",
+      "type": "text",
+      "objectTypes": ["dcim.interface"],
+      "status": "implemented-migration-planned",
+      "purpose": "Sanitized intended remote interface name"
+    },
+    {
+      "name": "wireguard_allowed_prefixes",
+      "label": "WireGuard allowed prefixes",
+      "type": "json",
+      "objectTypes": ["dcim.interface"],
+      "status": "implemented-migration-planned",
+      "purpose": "Bounded intended routed prefixes; never observed forwarding state"
+    },
+    {
+      "name": "wireguard_listen_port",
+      "label": "WireGuard listen port",
+      "type": "integer",
+      "objectTypes": ["dcim.interface"],
+      "status": "implemented-migration-planned",
+      "purpose": "Intended UDP listen port"
+    },
+    {
+      "name": "wireguard_peer_public_key_fingerprint",
+      "label": "WireGuard peer public key fingerprint",
+      "type": "text",
+      "objectTypes": ["dcim.interface"],
+      "status": "implemented-migration-planned",
+      "purpose": "Expected peer SHA-256 fingerprint for reconciliation; never a public or private key"
     }
   ]
 }

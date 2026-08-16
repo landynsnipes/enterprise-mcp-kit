@@ -53,7 +53,7 @@ assert IPAddress.objects.filter(tenant__group__slug="showcase-organizations").co
 assert Cluster.objects.filter(tenant__group__slug="showcase-organizations").count() >= 1
 assert VirtualMachine.objects.filter(tenant__group__slug="showcase-organizations").count() >= 3
 assert Platform.objects.filter(slug__in=["example-network-os", "example-secure-os", "enterprise-linux", "example-facility-firmware"]).count() == 4
-assert CustomField.objects.filter(name__in=["observed_software_version", "minimum_approved_version", "version_compliance", "version_evidence_source", "version_observed_at", "workload_software_versions", "redundancy_group", "failure_domain", "reconciliation_status"]).count() == 9
+assert CustomField.objects.filter(name__in=["observed_software_version", "minimum_approved_version", "version_compliance", "version_evidence_source", "version_observed_at", "workload_software_versions", "redundancy_group", "failure_domain", "reconciliation_status", "wireguard_peer_site", "wireguard_peer_device", "wireguard_peer_interface", "wireguard_allowed_prefixes", "wireguard_listen_port", "wireguard_peer_public_key_fingerprint"]).count() == 15
 assert Device.objects.filter(tenant__group__slug="showcase-organizations", platform__isnull=False).count() >= 21
 assert Service.objects.filter(parent_object_type__app_label="dcim", parent_object_type__model="device").count() >= 5
 assert CircuitTermination.objects.filter(circuit__tenant__group__slug="showcase-organizations", term_side="A", termination_type__app_label="dcim", termination_type__model="interface").count() >= 4
