@@ -11,6 +11,8 @@
   published.
 - Add an AT evidence case study that restates already-executed lab
   measurements and their limitations. No customer or production outcomes.
+- Add an evidence-linked governed AIOps threat model with explicit residual
+  risk. This is not a production certification.
 
 ## 0.2.0 - 2026-08-15
 

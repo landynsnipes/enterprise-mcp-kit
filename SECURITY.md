@@ -14,6 +14,9 @@ tokens, API keys, WireGuard keys, and inventory identifiers as sensitive.
 Compatibility with vendor APIs is listed in [docs/compatibility.md](docs/compatibility.md).
 A passing unit test is not a production certification.
 
+Governed AIOps threats, evidence links, and residual risk:
+[docs/threat-model.md](docs/threat-model.md).
+
 ## Required controls
 
 - Never commit tokens, keys, customer inventory, or production URLs.

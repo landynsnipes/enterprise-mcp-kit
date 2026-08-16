@@ -12,6 +12,7 @@ instead.
 - [Open Enterprise AIOps Platform roadmap](open-enterprise-aiops-roadmap.md)
 - [Acceptance evidence ledger](acceptance-evidence.md)
 - [AT evidence case study](at-evidence-case-study.md)
+- [Threat model](threat-model.md)
 
 Lab systemd units assume the repository is available at
 `/opt/enterprise-mcp-kit`. Symlink or copy your clone there, or edit the unit

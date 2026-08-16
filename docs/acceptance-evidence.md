@@ -7,6 +7,7 @@ schemas, and verification logic remain version controlled.
 
 Hiring-manager narrative of the same numbers:
 [AT evidence case study](at-evidence-case-study.md).
+Threats mapped to these tests: [threat model](threat-model.md).
 
 | Test | Status | Current evidence | Remaining limitation |
 | --- | --- | --- | --- |

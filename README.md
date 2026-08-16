@@ -85,6 +85,7 @@ Neither path grants the model an execution capability.
 - Tokens and WireGuard private keys never appear in tool output.
 - Compatibility and what tests actually prove: [docs/compatibility.md](docs/compatibility.md).
 - Vulnerability reports: [SECURITY.md](SECURITY.md).
+- Threat model, residual risk, and evidence links: [docs/threat-model.md](docs/threat-model.md).
 
 NetBox is live-verified against the included Community 4.6.5 lab. Grafana,
 Zabbix, WireGuard, Kubernetes, and OPNsense ship with mocked contract tests
