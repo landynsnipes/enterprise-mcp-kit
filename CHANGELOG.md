@@ -9,6 +9,8 @@
   raw output, token/cost methodology) and per-case live stimuli for the
   baseline `incident-explainer-v1` experiment. No live-model baseline is
   published.
+- Add an AT evidence case study that restates already-executed lab
+  measurements and their limitations. No customer or production outcomes.
 
 ## 0.2.0 - 2026-08-15
 

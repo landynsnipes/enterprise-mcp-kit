@@ -59,8 +59,10 @@ NetBox source of truth
 ```
 
 Measured lab evidence, with SHA-256 artifacts and remaining limitations, is
-in the [acceptance evidence ledger](docs/acceptance-evidence.md). Architecture
-decisions and failure assumptions are in the
+in the [acceptance evidence ledger](docs/acceptance-evidence.md). The
+[AT evidence case study](docs/at-evidence-case-study.md) walks the same
+numbers as problem → constraints → architecture → executed proofs →
+limitations. Architecture decisions and failure assumptions are in the
 [two-site architecture contract](docs/two-site-architecture-contract.md).
 
 The current lab proves governed recommendations, logical two-site topology,

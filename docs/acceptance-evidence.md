@@ -5,6 +5,9 @@ sanitized evidence. Runtime artifacts under `delivery-evidence/` are intentional
 ignored because they contain timestamps and local execution context; commands,
 schemas, and verification logic remain version controlled.
 
+Hiring-manager narrative of the same numbers:
+[AT evidence case study](at-evidence-case-study.md).
+
 | Test | Status | Current evidence | Remaining limitation |
 | --- | --- | --- | --- |
 | AT-01 clean rebuild | Partial | Pinned Compose, K3s manifests, OpenTofu plan, systemd units, and repeatable setup scripts; GitLab pipeline 7 rebuilt both logical workloads | Full empty-host timed rebuild and second-run configuration diff are not yet recorded |

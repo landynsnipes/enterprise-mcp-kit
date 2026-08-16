@@ -11,6 +11,7 @@ instead.
 - [Enterprise distribution architecture](../ENTERPRISE-DISTRIBUTION.md)
 - [Open Enterprise AIOps Platform roadmap](open-enterprise-aiops-roadmap.md)
 - [Acceptance evidence ledger](acceptance-evidence.md)
+- [AT evidence case study](at-evidence-case-study.md)
 
 Lab systemd units assume the repository is available at
 `/opt/enterprise-mcp-kit`. Symlink or copy your clone there, or edit the unit
