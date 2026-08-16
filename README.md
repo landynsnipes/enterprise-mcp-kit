@@ -1,10 +1,14 @@
 # Enterprise MCP Kit
 
-Bounded MCP jobs for systems you already run. Clone the repo, build once, and
-point a client at one exact object in NetBox, Grafana, Zabbix, WireGuard,
+[![Validate](https://github.com/landynsnipes/enterprise-mcp-kit/actions/workflows/validate.yml/badge.svg)](https://github.com/landynsnipes/enterprise-mcp-kit/actions/workflows/validate.yml)
+
+Bounded MCP jobs for systems you already run — and a governed AIOps lab that
+proves the same controls under failure. Clone the repo, build once, and point
+a client at one exact object in NetBox, Grafana, Zabbix, WireGuard,
 Kubernetes, or OPNsense. Writes stay off until you enable them.
 
-This is not a generic vendor API, shell, `kubectl`, or playbook runner.
+This is not a generic vendor API, shell, `kubectl`, playbook runner, or
+autonomous remediation product.
 
 ## Five-minute start
 
@@ -35,7 +39,35 @@ Full install, container, and live-check steps: [Use an MCP](docs/use-an-mcp.md).
 | Path | When to use | Start |
 | --- | --- | --- |
 | Use an MCP | You already operate one system above | [docs/use-an-mcp.md](docs/use-an-mcp.md) |
-| Run the lab | You want the optional NetBox / AIOps evaluation proofs | [docs/run-the-lab.md](docs/run-the-lab.md) |
+| Governed AIOps lab | You want the integration → observe → recommend → approve → verify loop | [docs/run-the-lab.md](docs/run-the-lab.md) |
+
+## Governed AIOps lab
+
+The supported product is the stdio MCP connectors. The lab is the public
+proof that those connectors sit inside a real operational workflow:
+
+```text
+NetBox source of truth
+  → Ansible / desired state
+  → Kubernetes workloads
+  → Zabbix + Prometheus
+  → Grafana
+  → bounded recommendation (LLM output is untrusted)
+  → human approval
+  → admitted execution only
+  → telemetry verification or rollback
+```
+
+Measured lab evidence, with SHA-256 artifacts and remaining limitations, is
+in the [acceptance evidence ledger](docs/acceptance-evidence.md). Architecture
+decisions and failure assumptions are in the
+[two-site architecture contract](docs/two-site-architecture-contract.md).
+
+The current lab proves governed recommendations, logical two-site topology,
+bounded execution, runtime verification, rollback, and isolated database
+recovery. It does **not** prove independent-site high availability, physical
+disaster recovery, production scale, or autonomous remediation. The
+deterministic incident evaluator does not call a production LLM.
 
 ## Safety defaults
 
