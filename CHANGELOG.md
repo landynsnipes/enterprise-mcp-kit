@@ -5,6 +5,10 @@
 - Add a versioned, provider-neutral incident recommendation eval: closed
   schema, adversarial fixture corpus, deterministic offline CI replay, and
   an optional live completer that never executes.
+- Record live-eval provenance (timestamp, commit SHA, prompt hash, sanitized
+  raw output, token/cost methodology) and per-case live stimuli for the
+  baseline `incident-explainer-v1` experiment. No live-model baseline is
+  published.
 
 ## 0.2.0 - 2026-08-15
 

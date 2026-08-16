@@ -72,8 +72,9 @@ deterministic incident evaluator does not call a production LLM.
 Recommendation quality is a separate, versioned track:
 [incident recommendation eval](docs/incident-recommendation-eval.md).
 `npm run eval:incident-recommendation` replays a closed-schema adversarial
-corpus offline. An optional live completer can score provider-neutral model
-output. Neither path grants the model an execution capability.
+corpus offline. `npm run eval:incident-recommendation:live` is implemented
+and is not part of CI. **No live-model baseline has been published yet.**
+Neither path grants the model an execution capability.
 
 ## Safety defaults
 

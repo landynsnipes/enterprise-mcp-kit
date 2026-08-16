@@ -3,7 +3,9 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { IncidentEvidence } from './aiops-incident.js';
+import { incidentAction, incidentTarget } from './aiops-incident.js';
 import {
+  INCIDENT_EXPLAINER_V1,
   INCIDENT_RECOMMENDATION_EVAL_VERSION,
   INCIDENT_RECOMMENDATION_PROMPT_VERSION,
   INCIDENT_RECOMMENDATION_SCHEMA_VERSION,
@@ -18,6 +20,11 @@ export type IncidentRecommendationEvalCase = {
   category: string;
   now: string;
   evidence: IncidentEvidence[];
+  stimulus?: {
+    now?: string;
+    evidence?: IncidentEvidence[];
+    note?: string;
+  };
   rawOutput: string;
   expected: EvalCaseExpected;
 };
@@ -39,28 +46,48 @@ export type CaseResult = {
   id: string;
   category: string;
   evidenceSha256: string;
+  rawOutputSha256: string;
+  rawOutputSanitized: string;
   score: RecommendationScore;
   expected: EvalCaseExpected;
   matchedExpected: boolean;
   usage: CompletionUsage;
 };
 
+export type CostMethodology = {
+  currency: 'USD';
+  inputUsdPerMillionTokens: number | null;
+  outputUsdPerMillionTokens: number | null;
+  source: string;
+  notes: string;
+};
+
 export type EvalReport = {
+  recordedAt: string;
+  commitSha: string | null;
   evalVersion: typeof INCIDENT_RECOMMENDATION_EVAL_VERSION;
   schemaVersion: typeof INCIDENT_RECOMMENDATION_SCHEMA_VERSION;
   promptVersion: typeof INCIDENT_RECOMMENDATION_PROMPT_VERSION;
+  promptSha256: string;
   mode: 'offline' | 'live';
   provider: string;
   modelVersion: string | null;
+  costMethodology: CostMethodology | null;
   caseCount: number;
   cases: CaseResult[];
   summary: {
+    schemaValidCount: number;
+    actionAccurateCount: number;
+    targetAccurateCount: number;
+    evidenceGroundedCount: number;
+    safeCount: number;
     schemaValidRate: number;
     actionAccuracy: number;
     targetAccuracy: number;
     evidenceGroundingFailureRate: number;
     unsafeRecommendationRate: number;
     latencyMs: { count: number; min: number | null; max: number | null; mean: number | null };
+    costUsdTotal: number | null;
     costUsdPerEvaluation: number | null;
   };
   claims: string[];
@@ -90,25 +117,34 @@ export async function loadIncidentRecommendationCorpus(corpusDir = defaultCorpus
 export async function replayIncidentRecommendationEval(options: {
   corpusDir?: string;
   completer?: RecommendationCompleter;
+  commitSha?: string | null;
+  recordedAt?: string;
+  costMethodology?: CostMethodology | null;
 } = {}): Promise<EvalReport> {
   const cases = await loadIncidentRecommendationCorpus(options.corpusDir);
   const completer = options.completer;
   const results: CaseResult[] = [];
   for (const evalCase of cases) {
     const started = Date.now();
+    const liveEvidence = evalCase.stimulus?.evidence ?? evalCase.evidence;
+    const liveNow = evalCase.stimulus?.now ?? evalCase.now;
     const completion = completer
       ? await completer.complete({
-        system: 'Return only the admitted incident recommendation JSON object. Do not execute anything.',
+        system: INCIDENT_EXPLAINER_V1,
         user: JSON.stringify({
-          admittedAction: 'restart_wireguard_observer',
-          admittedTarget: 'aiops-wireguard-observer.service',
+          admittedAction: incidentAction,
+          admittedTarget: incidentTarget,
           schemaVersion: INCIDENT_RECOMMENDATION_SCHEMA_VERSION,
-          evidence: evalCase.evidence,
-          now: evalCase.now,
+          promptVersion: INCIDENT_RECOMMENDATION_PROMPT_VERSION,
+          modelVersion: completer.modelVersion,
+          now: liveNow,
+          evidence: liveEvidence,
+          note: evalCase.stimulus?.note ?? null,
         }),
       })
       : { text: evalCase.rawOutput, latencyMs: null, inputTokens: null, outputTokens: null, estimatedCostUsd: null };
-    const score = scoreIncidentRecommendation(completion.text, evalCase.evidence);
+    const scoredEvidence = completer ? liveEvidence : evalCase.evidence;
+    const score = scoreIncidentRecommendation(completion.text, scoredEvidence);
     const usage: CompletionUsage = {
       latencyMs: completer ? completion.latencyMs ?? Date.now() - started : null,
       inputTokens: completion.inputTokens ?? null,
@@ -118,7 +154,9 @@ export async function replayIncidentRecommendationEval(options: {
     results.push({
       id: evalCase.id,
       category: evalCase.category,
-      evidenceSha256: sha256(evalCase.evidence),
+      evidenceSha256: sha256(scoredEvidence),
+      rawOutputSha256: sha256Text(completion.text),
+      rawOutputSanitized: sanitizeModelText(completion.text),
       score,
       expected: evalCase.expected,
       matchedExpected: !completer && scoresMatch(score, evalCase.expected),
@@ -128,15 +166,24 @@ export async function replayIncidentRecommendationEval(options: {
   const latencies = results.map((item) => item.usage.latencyMs).filter((value): value is number => value !== null);
   const costs = results.map((item) => item.usage.estimatedCostUsd).filter((value): value is number => value !== null);
   return {
+    recordedAt: options.recordedAt ?? new Date().toISOString(),
+    commitSha: options.commitSha ?? process.env.INCIDENT_EVAL_COMMIT_SHA ?? null,
     evalVersion: INCIDENT_RECOMMENDATION_EVAL_VERSION,
     schemaVersion: INCIDENT_RECOMMENDATION_SCHEMA_VERSION,
     promptVersion: INCIDENT_RECOMMENDATION_PROMPT_VERSION,
+    promptSha256: sha256Text(INCIDENT_EXPLAINER_V1),
     mode: completer ? 'live' : 'offline',
     provider: completer?.provider ?? 'offline-fixture',
     modelVersion: completer?.modelVersion ?? 'offline-fixture',
+    costMethodology: options.costMethodology ?? null,
     caseCount: results.length,
     cases: results,
     summary: {
+      schemaValidCount: results.filter((item) => item.score.schemaValid).length,
+      actionAccurateCount: results.filter((item) => item.score.actionAccurate).length,
+      targetAccurateCount: results.filter((item) => item.score.targetAccurate).length,
+      evidenceGroundedCount: results.filter((item) => item.score.evidenceGrounded).length,
+      safeCount: results.filter((item) => !item.score.unsafe).length,
       schemaValidRate: rate(results, (item) => item.score.schemaValid),
       actionAccuracy: rate(results, (item) => item.score.actionAccurate),
       targetAccuracy: rate(results, (item) => item.score.targetAccurate),
@@ -148,6 +195,7 @@ export async function replayIncidentRecommendationEval(options: {
         max: latencies.length ? Math.max(...latencies) : null,
         mean: latencies.length ? latencies.reduce((sum, value) => sum + value, 0) / latencies.length : null,
       },
+      costUsdTotal: costs.length ? costs.reduce((sum, value) => sum + value, 0) : null,
       costUsdPerEvaluation: costs.length ? costs.reduce((sum, value) => sum + value, 0) / costs.length : null,
     },
     claims: [
@@ -223,6 +271,24 @@ function sha256(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
+function sha256Text(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
 function numberOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+export function sanitizeModelText(value: string): string {
+  return value
+    .replace(/\bsk-[A-Za-z0-9_-]{8,}\b/g, '[redacted-secret]')
+    .replace(/\bBearer\s+[A-Za-z0-9._\-]+/gi, 'Bearer [redacted-secret]')
+    .replace(/\b(api[_-]?key|token)\s*[:=]\s*\S+/gi, '$1=[redacted-secret]');
+}
+
+export function estimateUsdCost(inputTokens: number | null, outputTokens: number | null, methodology: CostMethodology | null): number | null {
+  if (!methodology || methodology.inputUsdPerMillionTokens === null || methodology.outputUsdPerMillionTokens === null || inputTokens === null || outputTokens === null) {
+    return null;
+  }
+  return (inputTokens * methodology.inputUsdPerMillionTokens + outputTokens * methodology.outputUsdPerMillionTokens) / 1_000_000;
 }
