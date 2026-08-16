@@ -1,0 +1,55 @@
+name: Bug
+description: Something in a shipped MCP connector or documented path is wrong.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: path
+    attributes:
+      label: Path
+      options:
+        - Use an MCP
+        - Run the lab
+        - Documentation
+        - CI / release
+    validations:
+      required: true
+  - type: dropdown
+    id: connector
+    attributes:
+      label: Connector
+      options:
+        - NetBox
+        - Grafana
+        - Zabbix
+        - WireGuard
+        - Kubernetes + Ansible
+        - OPNsense
+        - None / shared
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Repository version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+    validations:
+      required: true
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Hygiene
+      options:
+        - label: This report contains no tokens, keys, customer inventory, or production URLs.
+          required: true

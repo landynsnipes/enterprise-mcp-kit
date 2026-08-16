@@ -13,16 +13,23 @@ The proof preserves workload source addresses and tests:
 - simulated WAN partition and recovery; and
 - exact namespace-only teardown while preserving ignored keys.
 
-Run from PowerShell:
+Run from the repository root. In PowerShell, replace the clone path with yours:
 
 ```powershell
-wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/setup.sh
-wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/verify.sh
-wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/partition.sh down
-wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/partition.sh up
-wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/verify-recovery.sh
-wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/verify-degraded-window.sh
-wsl -d Ubuntu -u root --cd /home/landynsnipes/enterprise-mcp-kit sh demo/wireguard-netns/down.sh
+wsl -d Ubuntu -u root --cd $PWD sh demo/wireguard-netns/setup.sh
+wsl -d Ubuntu -u root --cd $PWD sh demo/wireguard-netns/verify.sh
+wsl -d Ubuntu -u root --cd $PWD sh demo/wireguard-netns/partition.sh down
+wsl -d Ubuntu -u root --cd $PWD sh demo/wireguard-netns/partition.sh up
+wsl -d Ubuntu -u root --cd $PWD sh demo/wireguard-netns/verify-recovery.sh
+wsl -d Ubuntu -u root --cd $PWD sh demo/wireguard-netns/verify-degraded-window.sh
+wsl -d Ubuntu -u root --cd $PWD sh demo/wireguard-netns/down.sh
+```
+
+From Ubuntu in the clone:
+
+```sh
+sudo sh demo/wireguard-netns/setup.sh
+sudo sh demo/wireguard-netns/verify.sh
 ```
 
 `verify-degraded-window.sh` is the ten-minute AT-12 proof. It samples both

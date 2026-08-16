@@ -6,7 +6,7 @@ After=docker.service aiops-wireguard-observer.service network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/landynsnipes/enterprise-mcp-kit/demo/zabbix
+WorkingDirectory=/opt/enterprise-mcp-kit/demo/zabbix
 ExecStart=/usr/bin/docker compose up -d --remove-orphans
 ExecStartPost=/usr/bin/bash -c 'for i in {1..90}; do /usr/bin/curl -fsS http://127.0.0.1:8080/ping >/dev/null && exit 0; sleep 2; done; exit 1'
 ExecStartPost=/usr/bin/bash -c 'set -a; source ./.env; set +a; /usr/bin/node ./bootstrap.mjs'

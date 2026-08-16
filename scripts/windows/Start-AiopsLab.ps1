@@ -8,7 +8,9 @@ $existing = Get-CimInstance Win32_Process | Where-Object {
 }
 
 if (-not $existing) {
-    $arguments = @('-d', 'Ubuntu', '--', 'sh', '/home/landynsnipes/enterprise-mcp-kit/scripts/windows/enterprise-aiops-wsl-keepalive.sh')
+    $repoWindows = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+    $wslRoot = (wsl.exe -d Ubuntu wslpath -a $repoWindows).Trim()
+    $arguments = @('-d', 'Ubuntu', '--', 'sh', "$wslRoot/scripts/windows/enterprise-aiops-wsl-keepalive.sh")
     $process = Start-Process -FilePath 'wsl.exe' -ArgumentList $arguments -WindowStyle Hidden -PassThru
     Start-Sleep -Seconds 2
     if ($process.HasExited) {

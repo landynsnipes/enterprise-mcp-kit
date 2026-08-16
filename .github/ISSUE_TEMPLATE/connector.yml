@@ -1,0 +1,29 @@
+name: Connector request
+description: Propose a bounded job against a system you already run. Generic API wrappers are out of scope.
+title: "[connector] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: job
+    attributes:
+      label: Exact job
+      description: One sentence a human would ask, such as “What does Zabbix know about this host?”
+    validations:
+      required: true
+  - type: textarea
+    id: identifier
+    attributes:
+      label: Exact identifier
+      description: The single object key the tool would require. No list or search tools.
+    validations:
+      required: true
+  - type: textarea
+    id: write
+    attributes:
+      label: Optional write
+      description: If a write is needed, name the expected-current-value field and the rollback.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: New vendors are deferred until the six shipped connectors are released and operator-verified.

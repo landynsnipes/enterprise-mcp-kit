@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 const readJson = async (path) => JSON.parse(await readFile(path, 'utf8'));
 const distribution = await readJson('config/enterprise-distribution.json');
@@ -136,7 +137,7 @@ for (const requiredField of [
   assert.ok(fieldNames.has(requiredField), `Required enterprise field missing: ${requiredField}`);
 }
 
-for (const document of ['ENTERPRISE-DISTRIBUTION.md', 'THIRD_PARTY_LICENSES.md', 'README.md']) {
+for (const document of ['ENTERPRISE-DISTRIBUTION.md', 'THIRD_PARTY_LICENSES.md', 'README.md', 'SECURITY.md', 'CHANGELOG.md']) {
   assert.ok((await readFile(document, 'utf8')).length > 100, `Missing or empty document: ${document}`);
 }
 
@@ -144,6 +145,23 @@ const unpinnedArtifacts = distribution.components
   .filter((component) => component.artifact && !component.artifact.includes('@sha256:'))
   .map((component) => component.id);
 assert.deepEqual(unpinnedArtifacts, [], 'Included container artifacts must be pinned by digest.');
+
+const sourceRoots = ['src', 'test', 'scripts'];
+for (const root of sourceRoots) {
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    const entries = await readdir(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const next = path.join(current, entry.name);
+      if (entry.isDirectory()) stack.push(next);
+      else if (/\.(ts|mjs|js)$/.test(entry.name)) {
+        const personalHome = new RegExp(['\\/home\\/', 'landynsnipes'].join(''));
+        assert.doesNotMatch(await readFile(next, 'utf8'), personalHome, `Personal homedir path in ${next}`);
+      }
+    }
+  }
+}
 
 console.log(JSON.stringify({
   result: 'passed',

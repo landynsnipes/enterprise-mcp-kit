@@ -6,7 +6,7 @@ After=docker.service aiops-wireguard-observer.service network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/landynsnipes/enterprise-mcp-kit/demo/observability
+WorkingDirectory=/opt/enterprise-mcp-kit/demo/observability
 ExecStart=/usr/bin/docker compose up -d --remove-orphans
 ExecStartPost=/usr/bin/bash -c 'for i in {1..60}; do /usr/bin/curl -fsS http://127.0.0.1:9090/-/ready >/dev/null && /usr/bin/curl -fsS http://127.0.0.1:3000/api/health >/dev/null && exit 0; sleep 2; done; exit 1'
 ExecReload=/usr/bin/docker compose restart

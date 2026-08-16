@@ -1,5 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { requireCapability } from './governance-capabilities.js';
 import { GovernanceAuthorizationError, GovernanceStateError, GovernanceValidationError, type GovernanceActor } from './governance.js';
@@ -27,8 +30,19 @@ export class GovernedIncidentWorkflow {
   async recordRollback(actor:GovernanceActor,plan:IncidentPlan,reason:string):Promise<IncidentPlan>{requireCapability(actor,'plan:execute');sameTenant(actor,plan);exact(reason);if(plan.state!=='verified'||!plan.outcome)throw new GovernanceStateError('Rollback state can be recorded only after verified execution.');const current=await this.executor.snapshot();const healthy=await this.executor.healthy();if(!current.active||!healthy)throw new GovernanceStateError('Recorded active state is not currently restored.');plan.rollback={kind:'recorded-state-noop',activeStateRestored:true,recordedAt:this.now().toISOString(),reason};plan.state='rollback_recorded';record(plan,'rollback_state_recorded',actor,'Restart changes no configuration; recorded active state and health were preserved.');return structuredClone(plan);}
 }
 
+export function resolveIncidentPlaybook(playbook=process.env.INCIDENT_PLAYBOOK):string{
+  if(playbook){
+    if(!path.isAbsolute(playbook)||!existsSync(playbook))throw new GovernanceValidationError('INCIDENT_PLAYBOOK must be an existing absolute path.');
+    return playbook;
+  }
+  const here=path.dirname(fileURLToPath(import.meta.url));
+  const candidates=[path.resolve(here,'../../ansible/incidents/restart-wireguard-observer.yml'),path.resolve(here,'../ansible/incidents/restart-wireguard-observer.yml')];
+  const found=candidates.find(candidate=>existsSync(candidate));
+  if(!found)throw new GovernanceValidationError('Incident playbook was not found relative to the repository. Set INCIDENT_PLAYBOOK to an absolute path.');
+  return found;
+}
 export class AnsibleObserverExecutor implements ObserverExecutor{
-  constructor(private readonly playbook='/home/landynsnipes/enterprise-mcp-kit/ansible/incidents/restart-wireguard-observer.yml'){}
+  constructor(private readonly playbook=resolveIncidentPlaybook()){}
   async snapshot(){let state='unknown';try{state=(await run('/usr/bin/systemctl',['is-active',incidentTarget])).stdout.trim();}catch(error){state=String((error as {stdout?:unknown}).stdout??'unknown').trim();}const {stdout:pid}=await run('/usr/bin/systemctl',['show',incidentTarget,'--property=MainPID','--value']);return{active:state==='active',mainPid:Number(pid.trim())};}
   async restart(){await run('/usr/bin/ansible-playbook',['--inventory','localhost,','--connection','local',this.playbook],{timeout:60_000,maxBuffer:256*1024});}
   async healthy(){try{const response=await fetch('http://127.0.0.1:9108/health',{signal:AbortSignal.timeout(5_000)});return response.ok&&(await response.json() as {healthy?:unknown}).healthy===true;}catch{return false;}}

@@ -6,8 +6,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/sh /home/landynsnipes/enterprise-mcp-kit/demo/wireguard-netns/setup.sh
-ExecStop=/usr/bin/sh /home/landynsnipes/enterprise-mcp-kit/demo/wireguard-netns/down.sh
+ExecStart=/usr/bin/sh /opt/enterprise-mcp-kit/demo/wireguard-netns/setup.sh
+ExecStop=/usr/bin/sh /opt/enterprise-mcp-kit/demo/wireguard-netns/down.sh
 
 [Install]
 WantedBy=multi-user.target

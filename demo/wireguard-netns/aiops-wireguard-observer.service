@@ -5,7 +5,7 @@ Requires=aiops-wireguard-netns.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/node /home/landynsnipes/enterprise-mcp-kit/demo/wireguard-netns/observer.mjs
+ExecStart=/usr/bin/node /opt/enterprise-mcp-kit/demo/wireguard-netns/observer.mjs
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true

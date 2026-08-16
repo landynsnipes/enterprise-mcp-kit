@@ -1,18 +1,62 @@
 {
-  "name": "enterprise-mcp-kit",
-  "version": "0.1.0",
+  "name": "@landynsnipes/enterprise-mcp-kit",
+  "version": "0.2.0",
+  "description": "Bounded MCP connectors for existing NetBox, Grafana, Zabbix, WireGuard, Kubernetes, and OPNsense systems.",
   "license": "Apache-2.0",
-  "private": true,
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/landynsnipes/enterprise-mcp-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/landynsnipes/enterprise-mcp-kit/issues"
+  },
+  "homepage": "https://github.com/landynsnipes/enterprise-mcp-kit#readme",
+  "keywords": [
+    "mcp",
+    "netbox",
+    "grafana",
+    "zabbix",
+    "wireguard",
+    "kubernetes",
+    "opnsense",
+    "enterprise"
+  ],
   "engines": {
     "node": ">=18"
   },
   "type": "module",
+  "bin": {
+    "enterprise-mcp-netbox": "dist/src/server.js",
+    "enterprise-mcp-grafana": "dist/src/grafana-server.js",
+    "enterprise-mcp-zabbix": "dist/src/zabbix-server.js",
+    "enterprise-mcp-wireguard": "dist/src/wireguard-server.js",
+    "enterprise-mcp-kubernetes": "dist/src/kubernetes-ansible-server.js",
+    "enterprise-mcp-opnsense": "dist/src/opnsense-server.js"
+  },
+  "files": [
+    "dist/src",
+    "docs/connect-existing-*.md",
+    "docs/bounded-mcp-connectors.md",
+    "docs/compatibility.md",
+    "docs/use-an-mcp.md",
+    "examples/mcp",
+    "LICENSE",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test dist/test/*.test.js",
     "validate": "npm run typecheck && npm test && npm run validate:distribution",
     "validate:distribution": "node scripts/validate-enterprise-distribution.mjs",
+    "verify:connector": "node scripts/verify-existing-connector.mjs",
+    "mcp:netbox": "npm run mcp:stdio",
     "aiops:incident:prepare": "npm run build && node scripts/governed-incident-cli.mjs --prepare --inject-observer-failure",
     "aiops:incident:execute": "npm run build && node scripts/governed-incident-cli.mjs --approve-and-execute",
     "aiops:incident:evaluate": "npm run build && node scripts/evaluate-governed-incident.mjs",
@@ -33,6 +77,11 @@
     "aiops:wireguard:netns:down": "sh demo/wireguard-netns/down.sh",
     "aiops:wireguard:observe": "node demo/wireguard-netns/observer.mjs",
     "mcp:stdio": "npm run build && node dist/src/server.js",
+    "mcp:grafana": "npm run build && node dist/src/grafana-server.js",
+    "mcp:zabbix": "npm run build && node dist/src/zabbix-server.js",
+    "mcp:wireguard": "npm run build && node dist/src/wireguard-server.js",
+    "mcp:kubernetes": "npm run build && node dist/src/kubernetes-ansible-server.js",
+    "mcp:opnsense": "npm run build && node dist/src/opnsense-server.js",
     "governance:http": "npm run build && node dist/src/governance-http-server.js",
     "cloud-events:api": "npm run build && node dist/src/cloud-event-api-server.js",
     "cloud-events:worker": "npm run build && node dist/src/cloud-event-worker-server.js",

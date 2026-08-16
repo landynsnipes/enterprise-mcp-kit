@@ -1,0 +1,54 @@
+{
+  "mcpServers": {
+    "netbox-context": {
+      "command": "enterprise-mcp-netbox",
+      "env": {
+        "NETBOX_BASE_URL": "https://netbox.example.com",
+        "NETBOX_TOKEN": "${NETBOX_READ_TOKEN}"
+      }
+    },
+    "grafana-context": {
+      "command": "enterprise-mcp-grafana",
+      "env": {
+        "GRAFANA_BASE_URL": "https://grafana.example.com",
+        "GRAFANA_TOKEN": "${GRAFANA_TOKEN}",
+        "GRAFANA_ENABLE_WRITES": "false"
+      }
+    },
+    "zabbix-context": {
+      "command": "enterprise-mcp-zabbix",
+      "env": {
+        "ZABBIX_BASE_URL": "https://zabbix.example.com",
+        "ZABBIX_TOKEN": "${ZABBIX_TOKEN}",
+        "ZABBIX_ENABLE_WRITES": "false"
+      }
+    },
+    "wireguard-context": {
+      "command": "enterprise-mcp-wireguard",
+      "env": {
+        "WIREGUARD_BACKEND": "http",
+        "WIREGUARD_BASE_URL": "https://wg-status.example.com",
+        "WIREGUARD_ADMITTED_INTERFACES": "wg0",
+        "WIREGUARD_ENABLE_WRITES": "false"
+      }
+    },
+    "kubernetes-ansible": {
+      "command": "enterprise-mcp-kubernetes",
+      "env": {
+        "KUBERNETES_BASE_URL": "https://kubernetes.example.com",
+        "KUBERNETES_TOKEN": "${KUBE_TOKEN}",
+        "KUBERNETES_ADMITTED_NAMESPACES": "payments",
+        "KUBERNETES_ENABLE_WRITES": "false"
+      }
+    },
+    "opnsense-context": {
+      "command": "enterprise-mcp-opnsense",
+      "env": {
+        "OPNSENSE_BASE_URL": "https://fw.example.com",
+        "OPNSENSE_KEY": "${OPNSENSE_KEY}",
+        "OPNSENSE_SECRET": "${OPNSENSE_SECRET}",
+        "OPNSENSE_ENABLE_WRITES": "false"
+      }
+    }
+  }
+}
