@@ -2,7 +2,7 @@
 
 Choose this path to evaluate a full NetBox environment and the MCP together
 with sanitized, synthetic inventory. It is designed for demonstrations,
-integration testing, and learning—not production use.
+integration testing, and learning. It is not for production use.
 
 ## What the lab contains
 

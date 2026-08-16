@@ -55,12 +55,12 @@ The command prints only sanitized proof output. It must never print the token.
 `demo:seed:showcase` adds three connected enterprise scenarios while preserving
 the fast minimal smoke-test record:
 
-- **Northstar Financial** — primary and disaster-recovery data centers,
+- **Northstar Financial:** primary and disaster-recovery data centers,
   headquarters, production racks, a cabled edge-to-application path, circuits,
   VRF, VLAN, prefixes, and redundant rack power.
-- **Summit Digital** — hybrid cloud edge, platform management, Kubernetes-style
+- **Summit Digital:** hybrid cloud edge, platform management, Kubernetes-style
   cluster, virtual machines, circuits, IPAM, and redundant rack power.
-- **Atlas Managed Services** — shared colocation, managed core and firewall,
+- **Atlas Managed Services:** shared colocation, managed core and firewall,
   customer transit network, provider circuit, operational ownership, and
   redundant rack power.
 

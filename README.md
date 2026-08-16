@@ -2,7 +2,7 @@
 
 [![Validate](https://github.com/landynsnipes/enterprise-mcp-kit/actions/workflows/validate.yml/badge.svg)](https://github.com/landynsnipes/enterprise-mcp-kit/actions/workflows/validate.yml)
 
-Bounded MCP jobs for systems you already run — and a governed AIOps lab that
+Bounded MCP jobs for systems you already run, plus a governed AIOps lab that
 proves the same controls under failure. Clone the repo, build once, and point
 a client at one exact object in NetBox, Grafana, Zabbix, WireGuard,
 Kubernetes, or OPNsense. Writes stay off until you enable them.

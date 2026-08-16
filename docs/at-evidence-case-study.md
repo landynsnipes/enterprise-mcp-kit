@@ -16,7 +16,7 @@ The question this lab answers is narrower:
 
 > Can a bounded system observe a failure, keep AI output untrusted, require a
 > different human to approve an exact plan, execute only an admitted action,
-> verify the result in telemetry, and fail closed or roll back — and can those
+> verify the result in telemetry, and fail closed or roll back, and can those
 > claims be measured?
 
 ## Constraints

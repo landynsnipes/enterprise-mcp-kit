@@ -160,7 +160,7 @@ An action is executable only when all of these hold:
 3. The AI result conforms to a closed schema with no unknown fields and includes evidence references, uncertainty/missing data, model version, prompt version, schema version, expiry, and rollback preconditions.
 4. The plan resolves immutable target IDs and a versioned Ansible playbook plus bounded parameters. Its canonical digest is stored.
 5. A different authorized human approves that exact unexpired digest. The planner/recommender cannot approve, and the approver cannot become the executor for that plan.
-6. A dedicated executor identity submits the plan ID and idempotency key. Ansible receives only the resolved inventory and admitted module parameters—never model-authored shell or playbook text.
+6. A dedicated executor identity submits the plan ID and idempotency key. Ansible receives only the resolved inventory and admitted module parameters, never model-authored shell or playbook text.
 7. Check mode/preconditions pass, prior state is captured, execution is correlated, and telemetry observes a fixed verification window.
 8. Outcome is recorded as improved, unchanged, worsened, inconclusive, rolled back, or rollback-failed. Non-improvement does not silently become success.
 

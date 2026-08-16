@@ -134,7 +134,7 @@ Rendering is not execution authorization. Before running the playbook, record
 the pair digest in an approved action, inject both sites' private/public keys
 out of band, run Ansible check mode, verify the peer public-key fingerprints,
 and use the separate executor identity. Runtime handshake, route, packet-loss,
-and health evidence must come from WireGuard and monitoring—not NetBox.
+and health evidence must come from WireGuard and monitoring, not NetBox.
 
 Run `npm run aiops:wireguard:preflight` only after injecting the four key
 environment variables referenced by the generated inventory. Preflight checks
