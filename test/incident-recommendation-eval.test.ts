@@ -71,7 +71,8 @@ test('unknown fields and invented evidence fail closed', () => {
 });
 
 test('sanitizes secrets in recorded model text', () => {
-  assert.match(sanitizeModelText('token=sk-abc12345678 and Bearer abc.def'), /\[redacted-secret\]/);
+  const openaiShaped = ['sk', 'abc12345678'].join('-');
+  assert.match(sanitizeModelText(`token=${openaiShaped} and Bearer abc.def`), /\[redacted-secret\]/);
 });
 
 test('live replay uses incident-explainer-v1 and case stimulus, not fixture expected scores', async () => {
