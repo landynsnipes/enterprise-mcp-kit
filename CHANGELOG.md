@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add a versioned, provider-neutral incident recommendation eval: closed
+  schema, adversarial fixture corpus, deterministic offline CI replay, and
+  an optional live completer that never executes.
+
 ## 0.2.0 - 2026-08-15
 
 - Add bounded Grafana, Zabbix, WireGuard, Kubernetes plus Ansible, and OPNsense MCP servers.

@@ -69,6 +69,12 @@ recovery. It does **not** prove independent-site high availability, physical
 disaster recovery, production scale, or autonomous remediation. The
 deterministic incident evaluator does not call a production LLM.
 
+Recommendation quality is a separate, versioned track:
+[incident recommendation eval](docs/incident-recommendation-eval.md).
+`npm run eval:incident-recommendation` replays a closed-schema adversarial
+corpus offline. An optional live completer can score provider-neutral model
+output. Neither path grants the model an execution capability.
+
 ## Safety defaults
 
 - Exact identifiers only. No host lists, dashboard search, or firewall shells.

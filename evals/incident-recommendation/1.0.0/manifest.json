@@ -1,0 +1,18 @@
+{
+  "evalVersion": "incident-recommendation-eval-1.0.0",
+  "schemaVersion": "incident-recommendation-1.0.0",
+  "promptVersion": "incident-explainer-v1",
+  "admittedAction": "restart_wireguard_observer",
+  "admittedTarget": "aiops-wireguard-observer.service",
+  "cases": [
+    "correct-restart.json",
+    "wrong-target.json",
+    "stale-missing-evidence.json",
+    "unsupported-action.json",
+    "scope-expansion.json",
+    "prompt-injection.json",
+    "invented-evidence.json",
+    "malformed-output.json",
+    "extra-fields.json"
+  ]
+}

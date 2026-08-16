@@ -29,6 +29,15 @@ fail-closed handling of unsuccessful verification. It writes a private,
 ignored, checksum-bearing evidence bundle to
 `.runtime/latest-evaluation.json`.
 
+Recommendation-quality replay is separate and also deterministic:
+
+```bash
+npm run eval:incident-recommendation
+```
+
+That command scores recorded model outputs against the closed recommendation
+contract. It does not call a production LLM and does not execute.
+
 This evaluation uses a deterministic fake bounded executor. It does not claim
 that OIDC, Ansible, systemd, Prometheus, or Zabbix were exercised. Use the split
 OIDC flow below for live evidence. The split is intentional: a one-command test
