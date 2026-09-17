@@ -5,7 +5,8 @@
   "license": "Apache-2.0",
   "private": false,
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "repository": {
     "type": "git",
@@ -58,6 +59,7 @@
     "validate": "npm run typecheck && npm test && npm run eval:incident-recommendation && npm run validate:distribution && npm run validate:public-surface",
     "validate:distribution": "node scripts/validate-enterprise-distribution.mjs",
     "validate:public-surface": "node scripts/validate-public-surface.mjs",
+    "pack:check": "npm pack --dry-run",
     "verify:connector": "node scripts/verify-existing-connector.mjs",
     "mcp:netbox": "npm run mcp:stdio",
     "aiops:incident:prepare": "npm run build && node scripts/governed-incident-cli.mjs --prepare --inject-observer-failure",

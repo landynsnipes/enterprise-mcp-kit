@@ -5,6 +5,8 @@
 ### Added
 
 - Add a public-surface validator to the standard release gate.
+- Add the GitHub Packages distribution artifact, package install guidance, and
+  a release-triggered validation and publish workflow.
 
 ## Unreleased
 

@@ -2,6 +2,8 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Validate](https://github.com/landynsnipes/enterprise-mcp-kit/actions/workflows/validate.yml/badge.svg)](https://github.com/landynsnipes/enterprise-mcp-kit/actions/workflows/validate.yml)
+[![Release](https://img.shields.io/github/v/release/landynsnipes/enterprise-mcp-kit?display_name=tag&sort=semver)](https://github.com/landynsnipes/enterprise-mcp-kit/releases)
+[![Package](https://img.shields.io/badge/GitHub%20Packages-enterprise--mcp--kit-181717?logo=github)](https://github.com/landynsnipes/enterprise-mcp-kit/pkgs/npm/enterprise-mcp-kit)
 
 Bounded MCP jobs for systems you already run, plus a governed AIOps lab that
 proves the same controls under failure. Clone the repo, build once, and point
@@ -34,6 +36,19 @@ Desktop, Cursor, or another stdio MCP client. Ask a job such as “What does
 Zabbix know about host `edge-01`?”
 
 Full install, container, and live-check steps: [Use an MCP](docs/use-an-mcp.md).
+
+## Install the published package
+
+For a versioned install from GitHub Packages, configure the owner scope and
+authenticate with a token that has read:packages:
+
+    npm config set @landynsnipes:registry https://npm.pkg.github.com
+    npm install @landynsnipes/enterprise-mcp-kit@0.2.1
+
+The package exposes the six bounded stdio commands listed above. GitHub
+Packages is the distribution registry for this repository; see
+docs/package-release.md for authentication, contents, provenance, and rollback
+guidance.
 
 ## Choose a path
 
@@ -94,7 +109,7 @@ plus an operator `verify:connector` hook for *your* system.
 
 ## Status
 
-Version **0.2.0**. Apache-2.0. The stdio MCP surfaces are the supported
+Version **0.2.1**. Apache-2.0. The stdio MCP surfaces are the supported
 product. The governed HTTP gateway, CloudEvents path, and two-site AIOps lab
 remain evaluation or reference work. See
 [CHANGELOG.md](CHANGELOG.md),
