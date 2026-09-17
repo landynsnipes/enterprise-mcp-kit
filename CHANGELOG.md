@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 - 2026-09-16
+
+### Added
+
+- Add a public-surface validator to the standard release gate.
+
 ## Unreleased
 
 - Add a versioned, provider-neutral incident recommendation eval: closed

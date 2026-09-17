@@ -1,5 +1,6 @@
 # Enterprise MCP Kit
 
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Validate](https://github.com/landynsnipes/enterprise-mcp-kit/actions/workflows/validate.yml/badge.svg)](https://github.com/landynsnipes/enterprise-mcp-kit/actions/workflows/validate.yml)
 
 Bounded MCP jobs for systems you already run, plus a governed AIOps lab that

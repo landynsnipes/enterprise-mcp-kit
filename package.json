@@ -1,6 +1,6 @@
 {
   "name": "@landynsnipes/enterprise-mcp-kit",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Bounded MCP connectors for existing NetBox, Grafana, Zabbix, WireGuard, Kubernetes, and OPNsense systems.",
   "license": "Apache-2.0",
   "private": false,
@@ -55,8 +55,9 @@
     "test": "npm run build && node --test dist/test/*.test.js",
     "eval:incident-recommendation": "node scripts/evaluate-incident-recommendation.mjs",
     "eval:incident-recommendation:live": "node scripts/run-incident-recommendation-live.mjs",
-    "validate": "npm run typecheck && npm test && npm run eval:incident-recommendation && npm run validate:distribution",
+    "validate": "npm run typecheck && npm test && npm run eval:incident-recommendation && npm run validate:distribution && npm run validate:public-surface",
     "validate:distribution": "node scripts/validate-enterprise-distribution.mjs",
+    "validate:public-surface": "node scripts/validate-public-surface.mjs",
     "verify:connector": "node scripts/verify-existing-connector.mjs",
     "mcp:netbox": "npm run mcp:stdio",
     "aiops:incident:prepare": "npm run build && node scripts/governed-incident-cli.mjs --prepare --inject-observer-failure",
