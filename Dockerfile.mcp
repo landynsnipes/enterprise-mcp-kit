@@ -15,7 +15,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 # Apply the current Debian security update to the pinned base image.
 RUN apt-get update \
-    && apt-get install --no-install-recommends --only-upgrade -y libpcre2-8-0 linux-libc-dev \
+    && apt-get install --no-install-recommends --only-upgrade -y libpcre2-8-0 libaom3 libexpat1 libexpat1-dev libssh2-1 linux-libc-dev \
     && rm -rf /var/lib/apt/lists/*
 RUN npm ci --omit=dev \
     && npm cache clean --force \
